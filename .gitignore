@@ -1,0 +1,19 @@
+# secrets
+*.pem
+*.key
+.env
+.jupyter_token
+
+# data and models (generated on the LinuxONE server)
+data/raw/
+artifacts/
+*.gguf
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# os
+.DS_Store
