@@ -12,7 +12,7 @@ POLICY_PATH = Path(os.environ.get("NYAYA_POLICY_PATH", ROOT / "docs" / "relief_p
 FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures" / "policy_fixture.md"
 
 _HEADING = re.compile(r"^###\s+(\S+)\s+(.*)$")
-_TOKEN = re.compile(r"[a-z0-9]+")
+_TOKEN = re.compile(r"[^\W_]+", re.UNICODE)
 _STOP = set("the a an of to and or in on for is are be by with this that it as at from any if not".split())
 
 # Words added to the query for each decision so the right part of the policy wins ties.
@@ -61,7 +61,16 @@ class PolicyIndex:
         self.bm25 = BM25Okapi([tokenize(c["title"] + " " + c["text"]) for c in self.clauses])
 
     def query(self, text: str) -> dict:
-        scores = self.bm25.get_scores(tokenize(text))
+        tokens = tokenize(text)
+        if not tokens:
+            c = self.clauses[0]
+            return {"id": c["id"], "title": c["title"], "text": c["text"], "score": 0.0,
+                    "source": self.source}
+        scores = self.bm25.get_scores(tokens)
+        if len(scores) == 0:
+            c = self.clauses[0]
+            return {"id": c["id"], "title": c["title"], "text": c["text"], "score": 0.0,
+                    "source": self.source}
         i = int(scores.argmax())
         c = self.clauses[i]
         return {"id": c["id"], "title": c["title"], "text": c["text"], "score": round(float(scores[i]), 3),

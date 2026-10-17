@@ -35,6 +35,22 @@ LEDGER_PATH = Path(os.environ.get("NYAYA_LEDGER", ROOT / "var" / "ledger.jsonl")
 SCENARIOS_PATH = ROOT / "data" / "scenarios" / "demo_scenarios.json"
 IST = timezone(timedelta(hours=5, minutes=30))
 MAX_EXPLAINS = 50_000
+MAX_QUEUE = 20_000
+
+
+def validate_policy(policy: dict) -> None:
+    if "beta" in policy and float(policy["beta"]) <= 0:
+        raise ValueError("beta must be positive")
+    if "tau" in policy and float(policy["tau"]) <= 0:
+        raise ValueError("tau must be positive")
+    if "stipend_cap" in policy and float(policy["stipend_cap"]) < 0:
+        raise ValueError("stipend_cap cannot be negative")
+    if "alpha" in policy and float(policy["alpha"]) < 0:
+        raise ValueError("alpha cannot be negative")
+    if "theta_mule" in policy and not (0.0 < float(policy["theta_mule"]) <= 1.0):
+        raise ValueError("theta_mule must be in (0, 1]")
+    if "escrow_hours" in policy and float(policy["escrow_hours"]) <= 0:
+        raise ValueError("escrow_hours must be positive")
 
 
 def load_engine():
@@ -83,6 +99,12 @@ class Nyaya:
     # ------------------------------------------------------------------ evaluate
     def prepare(self, req: dict) -> dict:
         tx = {k: v for k, v in req.items() if v is not None}
+        if "sender_id" not in tx or not str(tx.get("sender_id", "")).strip():
+            raise ValueError("sender_id is required")
+        if "recipient_id" not in tx or not str(tx.get("recipient_id", "")).strip():
+            raise ValueError("recipient_id is required")
+        if "amount" not in tx:
+            raise ValueError("amount is required")
         tx["amount"] = float(tx["amount"])
         if tx["amount"] <= 0:
             raise ValueError("amount must be positive")
@@ -102,6 +124,7 @@ class Nyaya:
         t0 = time.perf_counter()
         tx = self.prepare(req)
         policy = {**self.policy, **(policy_overrides or {})}
+        validate_policy(policy)
 
         self.store.ingest(tx["ts"], tx["sender_id"], tx["recipient_id"], tx["amount"])
         recip = self.store.recipient_features(tx["recipient_id"], tx["ts"], tx.get("recipient"))
@@ -164,8 +187,12 @@ class Nyaya:
             while len(self.explains) > MAX_EXPLAINS:
                 self.explains.popitem(last=False)
             if d["decision"] in ("REVIEW", "HOLD"):
+                if len(self.queue) >= MAX_QUEUE:
+                    completed = [k for k, v in self.queue.items() if v["status"] != "pending"]
+                    for k in completed[:max(1, len(self.queue) - MAX_QUEUE + 1)]:
+                        self.queue.pop(k, None)
                 self.queue[explain_id] = {
-                    "explain_id": explain_id, "decision": d["decision"], "amount": tx["amount"],
+                    "explain_id": explain_id, "tx_id": tx.get("tx_id"), "decision": d["decision"], "amount": tx["amount"],
                     "release_now": d["release_now"], "escrow": d["escrow"], "status": "pending",
                     "appealed": False, "created": self.now(), "ledger_seq": rec["seq"],
                     "release_at": escrow["release_at"] if escrow else None,
@@ -213,10 +240,13 @@ class Nyaya:
         with self._lock:
             item = self.queue.get(explain_id)
             if item is None:
+                item = next((v for v in self.queue.values() if v.get("tx_id") == explain_id), None)
+            if item is None:
                 return None
             item["appealed"] = True
             item["appealed_at"] = self.now()
-        rec = self.ledger.append("appeal", {"explain_id": explain_id, "note_chars": len(note)})
+            target_id = item["explain_id"]
+        rec = self.ledger.append("appeal", {"explain_id": target_id, "note_chars": len(note)})
         return {**item, "ledger_hash": rec["hash"]}
 
     def queue_list(self) -> list[dict]:
@@ -230,15 +260,26 @@ class Nyaya:
         with self._lock:
             item = self.queue.get(explain_id)
             if item is None:
+                item = next((v for v in self.queue.values() if v.get("tx_id") == explain_id), None)
+            if item is None:
                 return None
             if item["status"] != "pending":
                 raise ValueError(f"already {item['status']}")
             item["status"] = "approved" if action == "approve" else "denied"
             item["decided_at"] = self.now()
+            target_id = item["explain_id"]
         kind = "analyst_release" if action == "approve" else "analyst_fraud_confirmed"
-        rec = self.ledger.append(kind, {"explain_id": explain_id, "analyst": analyst[:40],
+        rec = self.ledger.append(kind, {"explain_id": target_id, "analyst": analyst[:40],
                                         "ledger_seq_decision": item["ledger_seq"]})
         return {**item, "ledger_hash": rec["hash"]}
+
+    def adjudicate(self, explain_id: str, action: str, analyst: str = "analyst") -> dict | None:
+        """Alias for queue_action to satisfy adjudication contract."""
+        return self.queue_action(explain_id, action, analyst)
+
+    def verify_ledger(self) -> dict:
+        """Direct verification of the tamper-evident ledger hash chain."""
+        return self.ledger.verify()
 
     def auto_release(self) -> list[str]:
         """Default-to-release: escrow goes to the customer after escrow_hours unless fraud was confirmed."""
@@ -317,7 +358,10 @@ class Nyaya:
         except ImportError:
             fn = None
         if fn is not None:
-            return fn(self.sim_ctx(), params)
+            try:
+                return fn(self.sim_ctx(), params)
+            except (RuntimeError, FileNotFoundError):
+                pass
         cached = Path(os.environ.get("NYAYA_ARTIFACTS", ARTIFACTS)) / "sim" / f"{name}.json"
         if cached.exists():
             return {**json.loads(cached.read_text()), "_source": str(cached.name)}

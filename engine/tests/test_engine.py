@@ -127,3 +127,75 @@ def test_empty_conformal_set_counts_as_uncertain():
     assert d["decision"] in ("REVIEW", "HOLD")
     d = decide({"p_fraud": 0.0, "p_mule": 0.0}, tx(amount=500.0), POLICY)  # missing set is not uncertain
     assert d["decision"] == "RELEASE"
+
+
+# ---- Phase 2 Multi-Vector Stress Tests --------------------------------------------------------------------
+
+def test_nan_and_inf_scores_failsafe_hold():
+    # NaN or Inf fraud scores must never silently RELEASE
+    for bad_p in (float("nan"), float("inf"), float("-inf"), -0.5):
+        d = decide(sc(p_fraud=bad_p), tx(amount=1000.0), POLICY)
+        assert d["decision"] == "HOLD" and d["release_now"] == 0.0
+
+    d_mule_nan = decide(sc(p_fraud=0.01, p_mule=float("nan")), tx(amount=1000.0), POLICY)
+    assert d_mule_nan["decision"] == "HOLD" and d_mule_nan["release_now"] == 0.0
+
+
+def test_conformal_set_none_and_duplicates():
+    # NoneType conformal_set should not crash with TypeError
+    d_none = decide({"p_fraud": 0.01, "p_mule": 0.0, "conformal_set": None}, tx(amount=1000.0), POLICY)
+    assert d_none["decision"] == "RELEASE"
+
+    # Duplicate labels should be deduplicated
+    d_dup = decide({"p_fraud": 0.01, "p_mule": 0.0, "conformal_set": ["legit", "legit"]}, tx(amount=1000.0), POLICY)
+    assert d_dup["decision"] == "RELEASE"
+
+
+def test_negative_amounts_handled_safely():
+    d_neg = decide(sc(p_fraud=0.01), tx(amount=-500.0), POLICY)
+    assert d_neg["release_now"] >= 0.0
+    assert d_neg["h_fraud"] >= 0.0
+
+
+def test_severity_tier_clamped():
+    from engine.policy import severity
+    assert severity({"in_disaster_zone": 1, "severity_tier": -5}) == 0
+    assert severity({"in_disaster_zone": 1, "severity_tier": 10}) == 5
+    assert severity({"in_disaster_zone": 0, "severity_tier": 5}) == 0
+
+
+def test_tau_review_boundaries():
+    # Upper boundary: delta >= tau -> HOLD
+    pol = {**POLICY, "tau": 1000, "tau_review": 1000, "beta": 0}
+    d_tau = decide({"p_fraud": 0.1, "p_mule": 0.0, "conformal_set": ["legit"]}, {"amount": 10000.0}, pol)
+    assert d_tau["harm_delta"] == 1000.0
+    assert d_tau["decision"] == "HOLD"
+
+    # Band: delta > -tau_review and delta < tau -> REVIEW (if amount > cap)
+    pol_rev = {**POLICY, "tau": 1000, "tau_review": 1000, "beta": 500, "alpha": 0}
+    d_rev = decide({"p_fraud": 0.0, "p_mule": 0.0, "conformal_set": ["legit"]}, {"amount": 5000.0}, pol_rev)
+    assert d_rev["harm_delta"] == -500.0  # > -1000
+    assert d_rev["decision"] == "REVIEW"
+
+
+def test_counterfactual_immutability_and_edge_cases():
+    from data.features import tx_features
+
+    orig_tx = tx(amount=20000.0, new_device=1)
+    snapshot = dict(orig_tx)
+    row = tx_features(orig_tx)
+    row_snap = dict(row)
+
+    def scorer(r):
+        return {"p_fraud": 0.8 if r.get("new_device") else 0.01, "p_mule": 0.0,
+                "conformal_set": ["legit"], "contribs": [{"feature": "new_device", "value": 1, "contribution": 1.0}]}
+
+    cf = counterfactual(row, scorer, POLICY, orig_tx)
+    assert orig_tx == snapshot  # tx dict must not be mutated
+    assert row == row_snap      # row dict must not be mutated
+
+    # Zero amount in counterfactual
+    t_zero = tx(amount=0.0)
+    cf_zero = counterfactual(tx_features(t_zero), scorer, POLICY, t_zero)
+    assert cf_zero is None
+

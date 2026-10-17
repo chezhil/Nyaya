@@ -46,15 +46,15 @@ def is_night(hour: int) -> int:
 
 def tx_features(tx: dict) -> dict:
     """Model A feature dict for one payment. Missing balance columns are derived as a clean ledger would."""
-    amount = float(tx["amount"])
+    amount = max(float(tx.get("amount", 0.0) or 0.0), 0.0)
     old_o = tx.get("oldbalanceOrg")
-    old_o = amount if old_o is None else float(old_o)
+    old_o = amount if old_o is None else max(float(old_o), 0.0)
     new_o = tx.get("newbalanceOrig")
-    new_o = max(old_o - amount, 0.0) if new_o is None else float(new_o)
+    new_o = max(old_o - amount, 0.0) if new_o is None else max(float(new_o), 0.0)
     old_d = tx.get("oldbalanceDest")
-    old_d = 0.0 if old_d is None else float(old_d)
+    old_d = 0.0 if old_d is None else max(float(old_d), 0.0)
     new_d = tx.get("newbalanceDest")
-    new_d = old_d + amount if new_d is None else float(new_d)
+    new_d = old_d + amount if new_d is None else max(float(new_d), 0.0)
     hour = int(tx.get("hour", 12))
     return {
         "type_code": TX_TYPES.get(str(tx.get("type", "PAYMENT")).upper(), 0),
@@ -65,14 +65,14 @@ def tx_features(tx: dict) -> dict:
         "newbalanceDest": new_d,
         "hour": hour,
         "is_night": is_night(hour),
-        "geo_shift_km": float(tx.get("geo_shift_km", 0.0)),
-        "new_device": int(tx.get("new_device", 0)),
-        "merchant_code": MERCHANT_CODES.get(str(tx.get("merchant_category", "p2p")), 0),
-        "in_disaster_zone": int(tx.get("in_disaster_zone", 0)),
-        "severity_tier": int(tx.get("severity_tier", 0)),
+        "geo_shift_km": max(float(tx.get("geo_shift_km", 0.0) or 0.0), 0.0),
+        "new_device": int(tx.get("new_device", 0) or 0),
+        "merchant_code": MERCHANT_CODES.get(str(tx.get("merchant_category", "p2p")).lower(), 0),
+        "in_disaster_zone": int(tx.get("in_disaster_zone", 0) or 0),
+        "severity_tier": int(tx.get("severity_tier", 0) or 0),
         "orig_balance_err": old_o - amount - new_o,
         "dest_balance_err": old_d + amount - new_d,
-        "amount_to_balance": amount / (old_o + 1.0),
+        "amount_to_balance": amount / max(old_o + 1.0, 1e-4),
         "orig_drained": int(new_o <= 1.0 and old_o > 0),
     }
 
@@ -81,19 +81,56 @@ def tx_features_frame(df):
     """Vectorised tx_features over a DataFrame with the payment columns of data/schema.md."""
     import pandas as pd
 
+    if df.empty:
+        return pd.DataFrame(columns=MODEL_A_FEATURES)
+
     out = pd.DataFrame(index=df.index)
-    out["type_code"] = df["type"].map(TX_TYPES).fillna(0).astype(int)
-    for c in ["amount", "oldbalanceOrg", "newbalanceOrig", "oldbalanceDest", "newbalanceDest", "geo_shift_km"]:
-        out[c] = df[c].astype(float)
-    out["hour"] = df["hour"].astype(int)
+    if "type" in df.columns:
+        out["type_code"] = df["type"].astype(str).str.upper().map(TX_TYPES).fillna(0).astype(int)
+    else:
+        out["type_code"] = 0
+
+    amount = pd.to_numeric(df["amount"], errors="coerce").fillna(0.0).clip(lower=0.0) if "amount" in df.columns else pd.Series(0.0, index=df.index)
+    out["amount"] = amount
+
+    if "oldbalanceOrg" in df.columns:
+        old_o = pd.to_numeric(df["oldbalanceOrg"], errors="coerce").fillna(amount).clip(lower=0.0)
+    else:
+        old_o = amount.copy()
+    out["oldbalanceOrg"] = old_o
+
+    if "newbalanceOrig" in df.columns:
+        new_o = pd.to_numeric(df["newbalanceOrig"], errors="coerce").fillna((old_o - amount).clip(lower=0.0)).clip(lower=0.0)
+    else:
+        new_o = (old_o - amount).clip(lower=0.0)
+    out["newbalanceOrig"] = new_o
+
+    if "oldbalanceDest" in df.columns:
+        old_d = pd.to_numeric(df["oldbalanceDest"], errors="coerce").fillna(0.0).clip(lower=0.0)
+    else:
+        old_d = pd.Series(0.0, index=df.index)
+    out["oldbalanceDest"] = old_d
+
+    if "newbalanceDest" in df.columns:
+        new_d = pd.to_numeric(df["newbalanceDest"], errors="coerce").fillna(old_d + amount).clip(lower=0.0)
+    else:
+        new_d = (old_d + amount).clip(lower=0.0)
+    out["newbalanceDest"] = new_d
+
+    out["hour"] = pd.to_numeric(df["hour"], errors="coerce").fillna(12).astype(int) if "hour" in df.columns else 12
     out["is_night"] = ((out["hour"] >= 22) | (out["hour"] < 6)).astype(int)
-    out["new_device"] = df["new_device"].astype(int)
-    out["merchant_code"] = df["merchant_category"].map(MERCHANT_CODES).fillna(0).astype(int)
-    out["in_disaster_zone"] = df["in_disaster_zone"].astype(int)
-    out["severity_tier"] = df["severity_tier"].astype(int)
+    out["geo_shift_km"] = pd.to_numeric(df["geo_shift_km"], errors="coerce").fillna(0.0).clip(lower=0.0) if "geo_shift_km" in df.columns else 0.0
+    out["new_device"] = pd.to_numeric(df["new_device"], errors="coerce").fillna(0).astype(int) if "new_device" in df.columns else 0
+
+    m_cat = df["merchant_category"].astype(str).str.lower() if "merchant_category" in df.columns else pd.Series("p2p", index=df.index)
+    out["merchant_code"] = m_cat.map(MERCHANT_CODES).fillna(0).astype(int)
+
+    out["in_disaster_zone"] = pd.to_numeric(df["in_disaster_zone"], errors="coerce").fillna(0).astype(int) if "in_disaster_zone" in df.columns else 0
+    out["severity_tier"] = pd.to_numeric(df["severity_tier"], errors="coerce").fillna(0).astype(int) if "severity_tier" in df.columns else 0
+
     out["orig_balance_err"] = out["oldbalanceOrg"] - out["amount"] - out["newbalanceOrig"]
     out["dest_balance_err"] = out["oldbalanceDest"] + out["amount"] - out["newbalanceDest"]
-    out["amount_to_balance"] = out["amount"] / (out["oldbalanceOrg"] + 1.0)
+    out["amount_to_balance"] = out["amount"] / (out["oldbalanceOrg"].clip(lower=0.0) + 1.0)
     out["orig_drained"] = ((out["newbalanceOrig"] <= 1.0) & (out["oldbalanceOrg"] > 0)).astype(int)
     return out[MODEL_A_FEATURES]
 
@@ -116,9 +153,11 @@ class RecipientWindow:
         out_q = self._incoming.get(sender)
         if out_q:
             for item in reversed(out_q):
-                if ts - item[0] > self.forward_s:
+                delta = ts - item[0]
+                if delta > self.forward_s:
                     break
-                item[3] = True
+                if delta >= 0:
+                    item[3] = True
         self._incoming[recipient].append([ts, sender, amount, False])
 
     def _expire(self, account: str, now: float) -> deque:
@@ -127,6 +166,9 @@ class RecipientWindow:
             return deque()
         while q and now - q[0][0] >= self.window_s:
             q.popleft()
+        if any(now - item[0] >= self.window_s for item in q):
+            q = deque(item for item in q if 0 <= now - item[0] < self.window_s)
+            self._incoming[account] = q
         return q
 
     def features(self, recipient: str, now: float) -> dict:

@@ -7,7 +7,7 @@ import re
 # Patterns that look like an identifier: account/device/tx ids (P0000001, M000123, T00000042, C12345678),
 # IPv4 / subnets, phone-length digit runs, long hex strings (hashes, device fingerprints), UPI handles, emails.
 RAW_ID_PATTERNS = [
-    re.compile(r"\b[A-Z]{1,3}\d{4,}\b"),
+    re.compile(r"\b[A-Z]{1,4}\d{4,}\b"),
     re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}(?:/\d{1,2})?\b"),
     re.compile(r"(?<![\d,.])\d{10,}(?![\d,.])"),
     re.compile(r"\b[0-9a-fA-F]{16,}\b"),

@@ -22,6 +22,14 @@ class Notices:
     def render(self, decision: str, amount: float, release_now: float, escrow: float, hours: int) -> dict:
         slots = {"amount": inr(amount), "release_now": inr(release_now), "escrow": inr(escrow), "hours": hours}
         tpl = self.templates.get(decision, {})
-        out = {lang: (tpl[lang].format(**slots) if tpl.get(lang) else None) for lang in LANGS}
+        out = {}
+        for lang in LANGS:
+            text = tpl.get(lang)
+            if text:
+                rendered = text.replace("₹{", "{").format(**slots)
+                rendered = rendered.replace("₹₹", "₹")
+                out[lang] = rendered
+            else:
+                out[lang] = None
         out["source"] = self.source
         return out

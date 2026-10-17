@@ -29,6 +29,10 @@ INCIDENT_BASE = {
 def severity_tier(declaration_type: str, incident_type: str, ih_program: bool | int = False) -> int:
     """DR (major disaster) +1, FM (fire management) −1, Individual Housing assistance declared (+1: people
     displaced from their homes). Clamped to 1–5; 0 means no declaration."""
+    if not declaration_type or str(declaration_type).strip().upper() in ("", "NONE", "NAN"):
+        return 0
+    if not incident_type or str(incident_type).strip().lower() in ("", "none", "nan"):
+        return 0
     tier = INCIDENT_BASE.get(str(incident_type).strip().lower(), 1)
     dt = str(declaration_type).strip().upper()
     if dt == "DR":
@@ -56,8 +60,13 @@ def fetch(since: str = "2015-01-01", page: int = 1000, limit: int | None = None)
 
 def add_tiers(df):
     df = df.copy()
-    df["severity_tier"] = [severity_tier(d, i, h) for d, i, h in
-                           zip(df["declarationType"], df["incidentType"], df.get("ihProgramDeclared", False))]
+    if df.empty:
+        df["severity_tier"] = []
+        return df
+    dec = df["declarationType"] if "declarationType" in df.columns else [None] * len(df)
+    inc = df["incidentType"] if "incidentType" in df.columns else [None] * len(df)
+    ih = df["ihProgramDeclared"] if "ihProgramDeclared" in df.columns else [False] * len(df)
+    df["severity_tier"] = [severity_tier(d, i, h) for d, i, h in zip(dec, inc, ih)]
     return df
 
 

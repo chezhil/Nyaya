@@ -18,6 +18,8 @@ def split_indices(strata: pd.Series, fractions: dict[str, float], seed: int = SE
     """Seeded split of row positions, stratified by `strata` so every split sees every population."""
     rng = np.random.default_rng(seed)
     names = list(fractions)
+    if len(strata) == 0:
+        return {n: np.empty(0, dtype=int) for n in names}
     out = {n: [] for n in names}
     for _, pos in pd.Series(np.arange(len(strata))).groupby(strata.to_numpy()):
         pos = rng.permutation(pos.to_numpy())
@@ -27,7 +29,7 @@ def split_indices(strata: pd.Series, fractions: dict[str, float], seed: int = SE
         for n, c in zip(names, cuts):
             out[n].append(pos[start:c])
             start = c
-    return {n: np.sort(np.concatenate(v)) for n, v in out.items()}
+    return {n: np.sort(np.concatenate(v)) if v else np.empty(0, dtype=int) for n, v in out.items()}
 
 
 def brier(y, p) -> float:
@@ -37,8 +39,9 @@ def brier(y, p) -> float:
 
 def reliability(y, p, bins: int = 10) -> list[dict]:
     """Equal-width reliability table: mean predicted vs observed rate per bin (empty bins skipped)."""
-    y, p = np.asarray(y, float), np.asarray(p, float)
-    idx = np.minimum((p * bins).astype(int), bins - 1)
+    y = np.asarray(y, float)
+    p = np.clip(np.asarray(p, float), 0.0, 1.0)
+    idx = np.clip((p * bins).astype(int), 0, bins - 1)
     rows = []
     for b in range(bins):
         m = idx == b
@@ -49,4 +52,4 @@ def reliability(y, p, bins: int = 10) -> list[dict]:
 
 def write_json(path: Path, obj) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, indent=2))
+    path.write_text(json.dumps(obj, indent=2), encoding="utf-8")

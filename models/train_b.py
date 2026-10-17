@@ -48,7 +48,7 @@ def main() -> None:
     opt = torch.optim.Adam(model.parameters(), lr=3e-3, weight_decay=1e-5)
     loss_fn = nn.BCEWithLogitsLoss()
     g = torch.Generator().manual_seed(SEED)
-    best, best_state, bad, epoch = -1.0, None, 0, 0
+    best, best_state, bad, epoch = -1.0, {k: v.clone() for k, v in model.state_dict().items()}, 0, 0
     for epoch in range(args.epochs):
         model.train()
         perm = torch.randperm(len(t["train"][0]), generator=g)

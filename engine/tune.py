@@ -47,20 +47,25 @@ def main() -> None:
     pop = df["population"].to_numpy()
     cap = float(policy["stipend_cap"])
 
+    def safe_mean(arr: np.ndarray) -> float:
+        return float(arr.mean()) if len(arr) > 0 else 0.0
+
     def run(tau: float, tau_review: float) -> dict:
         pol = {**policy, "tau": tau, "tau_review": tau_review}
         dec = np.array([decide(sc, r, pol)["decision"] for sc, r in zip(scores, rows)])
         # Money that reaches a fraudster: full amount on RELEASE, only the stipend on REVIEW, nothing on HOLD.
         leaked = np.where(dec == "RELEASE", amount, np.where(dec == "REVIEW", np.minimum(amount, cap), 0.0))
+        fraud_sum = float(amount[fraud].sum()) if np.any(fraud) else 0.0
+        fraud_leaked = float(leaked[fraud].sum()) if np.any(fraud) else 0.0
         out = {"tau": tau, "tau_review": tau_review,
-               "fraud_leakage_inr": float(leaked[fraud].sum()), "fraud_total_inr": float(amount[fraud].sum()),
-               "fraud_hold_rate": float((dec[fraud] == "HOLD").mean()),
-               "legit_hold_rate": float((dec[~fraud] == "HOLD").mean()),
-               "legit_review_rate": float((dec[~fraud] == "REVIEW").mean())}
+               "fraud_leakage_inr": fraud_leaked, "fraud_total_inr": fraud_sum,
+               "fraud_hold_rate": safe_mean(dec[fraud] == "HOLD"),
+               "legit_hold_rate": safe_mean(dec[~fraud] == "HOLD"),
+               "legit_review_rate": safe_mean(dec[~fraud] == "REVIEW")}
         for p in ("displaced", "normal", "ato", "syndicate"):
             m = pop == p
-            out[f"{p}_hold"] = float((dec[m] == "HOLD").mean())
-            out[f"{p}_review"] = float((dec[m] == "REVIEW").mean())
+            out[f"{p}_hold"] = safe_mean(dec[m] == "HOLD")
+            out[f"{p}_review"] = safe_mean(dec[m] == "REVIEW")
         return out
 
     results = [run(t, r) for t in TAUS for r in TAU_REVIEWS]

@@ -138,3 +138,40 @@ def test_system(client):
     s = client.get("/api/v1/system").json()
     assert s["models"]["kind"] == "stub" and "missing artifacts" in s["models"]["fallback_reason"]
     assert s["ledger"]["records"] >= 1
+
+
+def test_healthz_and_version_and_audit(client):
+    assert client.get("/healthz").status_code == 200
+    assert client.get("/api/v1/healthz").status_code == 200
+    v = client.get("/version").json()
+    assert "version" in v and "engine_version" in v
+    assert client.get("/api/v1/version").status_code == 200
+    aud = client.get("/audit").json()
+    assert aud["status"] == "audited" and aud["ledger"]["ok"]
+    assert client.get("/api/v1/audit").status_code == 200
+    assert client.get("/system").status_code == 200
+
+
+def test_pareto_query_params_and_validation(client):
+    assert client.get("/api/v1/pareto?alpha=0.6&beta=300&tau=5000&stipend_cap=3000").status_code == 503
+    assert client.get("/pareto?alpha=0.6").status_code == 503
+    assert client.get("/api/v1/pareto?alpha=1.5").status_code == 422
+    assert client.get("/api/v1/pareto?alpha=-0.1").status_code == 422
+    assert client.get("/api/v1/pareto?beta=invalid").status_code == 422
+    assert client.get("/api/v1/pareto?tau=-50").status_code == 422
+
+
+def test_evaluate_policy_bounds_and_query_overrides(client):
+    r_query = client.post("/api/v1/evaluate?alpha=0.7&stipend_cap=2500", json=MEENA)
+    assert r_query.status_code == 200
+    assert client.post("/api/v1/evaluate", json={**MEENA, "policy": {"stipend_cap": -100}}).status_code == 422
+    assert client.post("/api/v1/evaluate", json={**MEENA, "policy": {"alpha": -0.5}}).status_code == 422
+    assert client.post("/api/v1/evaluate", json={**MEENA, "policy": {"alpha": 1.5}}).status_code == 422
+    assert client.post("/api/v1/evaluate", json={**MEENA, "policy": {"tau": "invalid"}}).status_code == 422
+    assert client.post("/api/v1/evaluate", json={**MEENA, "sender_id": ""}).status_code == 422
+
+
+def test_cors_preflight(client):
+    r = client.options("/api/v1/evaluate", headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "POST"})
+    assert r.status_code == 200
+    assert r.headers.get("access-control-allow-origin") == "*"

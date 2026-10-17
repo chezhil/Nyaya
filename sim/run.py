@@ -24,7 +24,14 @@ def main() -> None:
     if not isinstance(params, dict):
         raise ValueError("--params must decode to a JSON object")
     policy = json.loads(POLICY_PATH.read_text())
-    ctx = SimpleNamespace(bundle=load_bundle(), decide=decide, policy=policy)
+    bundle = load_bundle()
+    if bundle.info().get("kind") != "real":
+        reason = getattr(bundle, "fallback_reason", "missing artifacts")
+        raise RuntimeError(
+            f"Evaluation command '{args.command}' requires trained Model A and Model B artifacts; "
+            f"found StubBundle ({reason}). Train models first via models.train_a and models.train_b."
+        )
+    ctx = SimpleNamespace(bundle=bundle, decide=decide, policy=policy)
     result = {"simulate": simulate, "pareto": pareto, "redteam": redteam}[args.command](ctx, params)
     if args.out:
         write_result(args.out, result)

@@ -22,11 +22,13 @@ DEFAULT_TAGS = {
 }
 
 
-def _data_dir(params: dict) -> Path:
+def _data_dir(params: dict | None) -> Path:
+    params = dict(params or {})
     return Path(params.get("data_dir") or os.environ.get("NYAYA_DATA", Path.home() / "shared" / "data"))
 
 
-def _read_payments(params: dict, tag: str | None = None) -> pd.DataFrame:
+def _read_payments(params: dict | None, tag: str | None = None) -> pd.DataFrame:
+    params = dict(params or {})
     tag = tag or str(params.get("tag", "v1"))
     path = _data_dir(params) / f"nyaya_{tag}.csv.gz"
     if not path.exists():
@@ -35,6 +37,8 @@ def _read_payments(params: dict, tag: str | None = None) -> pd.DataFrame:
 
 
 def _test_positions(df: pd.DataFrame) -> np.ndarray:
+    if len(df) == 0:
+        return np.array([], dtype=int)
     fractions = _train_a_fractions()
     strata = df["population"].astype(str) + "|" + df["is_fraud"].astype(str)
     return split_indices(strata, fractions, seed=SEED)["test"]
@@ -74,7 +78,7 @@ def _fixed_sample(df: pd.DataFrame, counts: dict[str, int], seed: int) -> pd.Dat
     test = df.iloc[_test_positions(df)]
     rng = np.random.default_rng(seed)
     chosen: list[np.ndarray] = []
-    for population, count in counts.items():
+    for population, count in (counts or {}).items():
         positions = np.flatnonzero(test["population"].to_numpy() == population)
         if len(positions) < count:
             raise ValueError(
@@ -82,6 +86,8 @@ def _fixed_sample(df: pd.DataFrame, counts: dict[str, int], seed: int) -> pd.Dat
                 f"{count} unique rows are required"
             )
         chosen.append(rng.choice(positions, size=count, replace=False))
+    if not chosen:
+        return test.iloc[[]].reset_index(drop=True)
     order = rng.permutation(np.concatenate(chosen))
     return test.iloc[order].reset_index(drop=True)
 
@@ -96,6 +102,13 @@ def _require_real_bundle(ctx) -> None:
 
 
 def _score(ctx, df: pd.DataFrame) -> dict:
+    if len(df) == 0:
+        return {
+            "p_fraud": np.array([], dtype=float),
+            "p_mule": np.array([], dtype=float),
+            "conformal_set": [],
+            "p_legacy_raw": np.array([], dtype=float),
+        }
     a_rows = tx_features_frame(df)
     b_rows = df[MODEL_B_FEATURES]
     result = ctx.bundle.score_batch(a_rows, b_rows)
@@ -107,6 +120,8 @@ def _score(ctx, df: pd.DataFrame) -> dict:
 
 
 def _decisions(ctx, df: pd.DataFrame, scores: dict, policy: dict) -> pd.DataFrame:
+    if len(df) == 0:
+        return pd.DataFrame(columns=["decision", "release_now", "escrow", "harm_delta", "h_fraud", "h_hold"])
     rows = []
     p_fraud = np.asarray(scores["p_fraud"], dtype=float)
     p_mule = np.asarray(scores["p_mule"], dtype=float)
@@ -118,6 +133,8 @@ def _decisions(ctx, df: pd.DataFrame, scores: dict, policy: dict) -> pd.DataFram
 
 
 def _baseline_decisions(df: pd.DataFrame, legacy_scores: np.ndarray, threshold: float, cap: float | None) -> pd.DataFrame:
+    if len(df) == 0:
+        return pd.DataFrame(columns=["decision", "release_now", "escrow"])
     hold = np.asarray(legacy_scores, dtype=float) >= float(threshold)
     if cap is not None:
         waived = (df["in_disaster_zone"].to_numpy() == 1) & (df["amount"].to_numpy(float) <= float(cap))
@@ -136,6 +153,8 @@ def _expected_harm(df: pd.DataFrame, decisions: pd.DataFrame, policy_decisions: 
     RELEASE incurs expected fraud loss. HOLD incurs expected legitimate-customer
     harm. REVIEW scales both terms by the immediately released/escrowed shares.
     """
+    if len(df) == 0:
+        return 0.0
     amount = df["amount"].to_numpy(float)
     safe_amount = np.where(amount > 0, amount, 1.0)
     released = decisions["release_now"].to_numpy(float) / safe_amount
@@ -147,7 +166,7 @@ def _expected_harm(df: pd.DataFrame, decisions: pd.DataFrame, policy_decisions: 
 
 def _ratio(values: Iterable[float]) -> float | None:
     vals = np.asarray(list(values), dtype=float)
-    if vals.size == 0 or np.any(~np.isfinite(vals)):
+    if vals.size < 2 or np.any(~np.isfinite(vals)):
         return None
     lo, hi = float(vals.min()), float(vals.max())
     if lo == 0:
@@ -156,6 +175,16 @@ def _ratio(values: Iterable[float]) -> float | None:
 
 
 def _fairness(df: pd.DataFrame, decisions: pd.DataFrame) -> dict:
+    if "sender_income_band" not in df.columns or len(df) == 0:
+        bands = {b: {"n": 0, "freeze_rate": None, "review_rate": None} for b in ("low", "mid", "high")}
+        return {
+            "by_sender_income_band": bands,
+            "max_min_freeze_ratio": None,
+            "max_min_review_ratio": None,
+            "target_max_ratio": 1.25,
+            "target_met": False,
+            "note": "sender_income_band is used only after scoring, for audit aggregation",
+        }
     audit = pd.DataFrame({
         "band": df["sender_income_band"].fillna("").astype(str),
         "decision": decisions["decision"].astype(str),
@@ -190,20 +219,21 @@ def _metrics(df: pd.DataFrame, decisions: pd.DataFrame, policy_decisions: pd.Dat
     amounts = df["amount"].to_numpy(float)
     d_count = int(displaced.sum())
     victims_zero = int(np.sum(displaced & (released <= 0)))
-    conformal = scores["conformal_set"]
+    conformal = scores.get("conformal_set", [])
     covered = [(("fraud" if y else "legit") in set(s)) for y, s in zip(fraud, conformal)]
+    dec_array = decisions["decision"].to_numpy() if "decision" in decisions else np.array([])
     return {
         "rows": int(len(df)),
         "victims_left_with_zero": victims_zero,
         "victims_left_with_zero_rate": float(victims_zero / d_count) if d_count else None,
-        "victim_freeze_rate": float(np.mean(decisions.loc[displaced, "decision"] == "HOLD")) if d_count else None,
+        "victim_freeze_rate": float(np.mean(dec_array[displaced] == "HOLD")) if d_count else None,
         "emergency_cash_availability": float(released[displaced].sum() / amounts[displaced].sum())
         if d_count and amounts[displaced].sum() else None,
-        "fraud_leakage_rupees": float(released[fraud].sum()),
+        "fraud_leakage_rupees": float(released[fraud].sum()) if len(df) else 0.0,
         "total_expected_harm_rupees": _expected_harm(df, decisions, policy_decisions),
-        "pr_auc_model_a": _average_precision(fraud.astype(int), scores["p_fraud"]),
-        "pr_auc_model_b": _average_precision(mule, scores["p_mule"]),
-        "conformal_coverage": float(np.mean(covered)),
+        "pr_auc_model_a": _average_precision(fraud.astype(int), scores["p_fraud"]) if int(fraud.sum()) > 0 else None,
+        "pr_auc_model_b": _average_precision(mule, scores["p_mule"]) if int(mule.sum()) > 0 else None,
+        "conformal_coverage": float(np.mean(covered)) if len(covered) else None,
     }
 
 
@@ -245,7 +275,8 @@ def simulate(ctx, params: dict) -> dict:
     }
 
 
-def _grid(params: dict, name: str, current: float, multipliers: tuple[float, ...]) -> list[float]:
+def _grid(params: dict | None, name: str, current: float, multipliers: tuple[float, ...]) -> list[float]:
+    params = dict(params or {})
     supplied = params.get(f"{name}_values")
     values = supplied if supplied is not None else [current * m for m in multipliers]
     return sorted({float(v) for v in values})
@@ -280,8 +311,12 @@ def pareto(ctx, params: dict) -> dict:
             policy = {**base, name: value}
             decisions = _decisions(ctx, df, scores, policy)
             metrics = _metrics(df, decisions, decisions, scores)
+            current_references = {
+                "legacy": _metrics(df, legacy, decisions, scores),
+                "naive_relaxed": _metrics(df, naive, decisions, scores),
+            } if name in ("alpha", "beta") else references
             loses = [
-                baseline for baseline, result in references.items()
+                baseline for baseline, result in current_references.items()
                 if metrics["total_expected_harm_rupees"] > result["total_expected_harm_rupees"]
             ]
             points.append({"parameter": name, "value": value, "metrics": metrics, "loses_to": loses})
@@ -302,7 +337,9 @@ def _variant_detection(ctx, df: pd.DataFrame, policy: dict, variant: str) -> dic
     drops = {}
     for feature in MODEL_B_FEATURES:
         perturbed = target.copy()
-        perturbed[feature] = float(test.loc[test["is_mule_recipient"] == 0, feature].median())
+        non_mules = test.loc[test["is_mule_recipient"] == 0, feature]
+        med_val = float(non_mules.median()) if len(non_mules) > 0 and not np.isnan(non_mules.median()) else 0.0
+        perturbed[feature] = med_val
         changed = np.asarray(_score(ctx, perturbed)["p_mule"], float)
         drops[feature] = float(np.mean(original - changed))
     strongest = max(drops, key=drops.get)

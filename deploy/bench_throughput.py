@@ -21,13 +21,15 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 
-def build(artifacts: Path, random_weights: bool):
+def build(artifacts: Path | str, random_weights: bool):
     import torch
     from torch import nn
 
-    m = nn.Sequential(nn.Linear(7, 32), nn.ReLU(), nn.Linear(32, 16), nn.ReLU(), nn.Linear(16, 1))
+    artifacts = Path(artifacts)
     if random_weights:
         torch.manual_seed(0)
+    m = nn.Sequential(nn.Linear(7, 32), nn.ReLU(), nn.Linear(32, 16), nn.ReLU(), nn.Linear(16, 1))
+    if random_weights:
         return m.eval(), "random weights (architecture timing only)"
     m.load_state_dict(torch.load(artifacts / "model_b.pt", map_location="cpu"))
     meta = json.loads((artifacts / "model_b_meta.json").read_text())
@@ -40,6 +42,7 @@ def time_device(model, X, device: str, repeats: int, warmup: int) -> dict:
     m = model.to(device)
     x_cpu = torch.from_numpy(X)
     lat = []
+    out = None
     with torch.no_grad():
         for i in range(warmup + repeats):
             t = time.perf_counter()
@@ -48,11 +51,16 @@ def time_device(model, X, device: str, repeats: int, warmup: int) -> dict:
             if i >= warmup:
                 lat.append(dt)
     lat = np.array(lat)
+    med = float(np.median(lat)) if len(lat) else 0.0
+    p50 = round(float(np.percentile(lat, 50)) * 1000, 3) if len(lat) else 0.0
+    p95 = round(float(np.percentile(lat, 95)) * 1000, 3) if len(lat) else 0.0
+    dps = round(float(X.shape[0] / med), 1) if med > 0 else 0.0
+    chk = round(float(out.sum()), 4) if out is not None else 0.0
     return {"device": device, "batch": int(X.shape[0]), "repeats": repeats,
-            "p50_ms": round(float(np.percentile(lat, 50)) * 1000, 3),
-            "p95_ms": round(float(np.percentile(lat, 95)) * 1000, 3),
-            "decisions_per_s": round(float(X.shape[0] / np.median(lat)), 1),
-            "output_checksum": round(float(out.sum()), 4)}
+            "p50_ms": p50,
+            "p95_ms": p95,
+            "decisions_per_s": dps,
+            "output_checksum": chk}
 
 
 def main(argv=None):

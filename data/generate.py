@@ -102,7 +102,8 @@ class _Gen:
         return float(round(max(20.0, self.rng.lognormal(math.log(med), sig)), 2))
 
     def sample_hours(self, n: int, weights: np.ndarray) -> np.ndarray:
-        w = weights / weights.sum()
+        w_sum = weights.sum()
+        w = (weights / w_sum) if w_sum > 0 else (np.ones(self.hours) / self.hours)
         h = self.rng.choice(self.hours, size=n, p=w)
         return T0 + h * 3600 + self.rng.uniform(0, 3600, size=n)
 
@@ -265,8 +266,9 @@ class _Gen:
                           for h in range(self.hours)])
         cats = list(DISPLACED_MIX)
         cat_p = np.array(list(DISPLACED_MIX.values()))
+        pool_displaced = self.displaced or self.zone_persons or self.persons
         for ts in self.sample_hours(c.n_displaced, w):
-            s = self.displaced[int(rng.integers(len(self.displaced)))]
+            s = pool_displaced[int(rng.integers(len(pool_displaced)))]
             cat = cats[rng.choice(len(cats), p=cat_p)]
             if cat == "p2p":
                 r, typ = self.persons[int(rng.integers(len(self.persons)))], "TRANSFER"
@@ -289,8 +291,9 @@ class _Gen:
         c, rng = self.cfg, self.rng
         w = np.where(self.severity >= 2, self.severity.astype(float), 0.0)
         young = [p for p in self.zone_persons if self.by_id[p]["account_age_days"] < 60]
+        pool_displaced = self.displaced or self.zone_persons or self.persons
         for _ in range(max(5, c.n_displaced // 250)):
-            pool = young if young and rng.random() < 0.5 else self.zone_persons
+            pool = young if young and rng.random() < 0.5 else (self.zone_persons or self.persons)
             col = pool[int(rng.integers(len(pool)))]
             for _ in range(int(rng.integers(1, 4))):
                 start = float(self.sample_hours(1, w)[0])
@@ -307,7 +310,7 @@ class _Gen:
                 for _ in range(int(rng.integers(1, 4))):
                     ts = start + span * float(rng.uniform(0.3, 1.0)) + float(rng.uniform(60, 1200))
                     if rng.random() < 0.5:
-                        r, cat = self.displaced[int(rng.integers(len(self.displaced)))], "p2p"
+                        r, cat = pool_displaced[int(rng.integers(len(pool_displaced)))], "p2p"
                     else:
                         cat = "pharmacy" if rng.random() < 0.5 else "grocery"
                         r = self.pick_merchant(cat, True, hot=True)
@@ -320,6 +323,7 @@ class _Gen:
         c, rng, v = self.cfg, self.rng, self.cfg.variant
         w = np.where(self.severity >= 3, self.severity.astype(float), 0.0)
         made, ring = 0, 0
+        pool_zone = self.zone_persons or self.persons
         while made < c.n_syndicate:
             m = c.mules_per_ring * (3 if v == "smurf" else 1)
             lo, hi = c.victims_per_mule
@@ -344,7 +348,7 @@ class _Gen:
                     if made >= c.n_syndicate:
                         break
                     ts = start + float(rng.uniform(0, burst))
-                    s = self.zone_persons[int(rng.integers(len(self.zone_persons)))]
+                    s = pool_zone[int(rng.integers(len(pool_zone)))]
                     idx = self.ev(ts=ts, sender_id=s, recipient_id=mule, type="TRANSFER",
                                   drain_frac=float(rng.uniform(0.85, 1.0) if rng.random() < 0.75
                                                    else rng.uniform(0.5, 0.85)),
@@ -358,10 +362,11 @@ class _Gen:
                         delay = rng.uniform(720, 2400)
                     else:
                         delay = rng.uniform(60, 480) if rng.random() < 0.7 else rng.uniform(480, 1500)
-                    self.ev(ts=ts + float(delay), sender_id=mule, recipient_id=cash[int(rng.integers(2))],
+                    fwd_ts = ts + float(delay)
+                    self.ev(ts=fwd_ts, sender_id=mule, recipient_id=cash[int(rng.integers(2))],
                             type="TRANSFER", src_idx=idx, forward_frac=float(rng.uniform(0.95, 0.99)),
                             merchant_category="p2p", geo_shift_km=float(rng.exponential(5.0)), new_device=0,
-                            in_disaster_zone=1, severity_tier=max(1, self.sev(ts)),
+                            in_disaster_zone=1, severity_tier=max(1, self.sev(fwd_ts)),
                             population="syndicate_forward", is_fraud=1)
             ring += 1
         self.n_rings = ring

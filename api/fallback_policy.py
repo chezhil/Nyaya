@@ -19,7 +19,7 @@ def urgency(tx: dict, policy: dict) -> float:
 def decide(scores: dict, tx: dict, policy: dict) -> dict:
     p = float(scores["p_fraud"])
     amount = float(tx["amount"])
-    s = int(tx.get("severity_tier", 0)) if tx.get("in_disaster_zone") else 0
+    s = int(tx.get("severity_tier") or 0) if tx.get("in_disaster_zone") else 0
     h_fraud = p * amount
     h_hold = (1 - p) * float(policy["beta"]) * math.exp(float(policy["alpha"]) * s) * urgency(tx, policy)
     delta = h_fraud - h_hold

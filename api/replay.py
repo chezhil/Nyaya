@@ -18,6 +18,10 @@ def legacy_threshold(bundle, scored_legacy: np.ndarray, tx) -> tuple[float, str]
     if thr is not None:
         return float(thr), "model_a_meta.json"
     mask = (tx["is_fraud"].to_numpy() == 0) & (tx["in_disaster_zone"].to_numpy() == 0)
+    if mask.sum() == 0:
+        mask = tx["is_fraud"].to_numpy() == 0
+    if mask.sum() == 0:
+        mask = np.ones(len(tx), dtype=bool)
     return float(np.quantile(scored_legacy[mask], 0.99)), "computed: 99th percentile of legit peacetime scores"
 
 
@@ -71,11 +75,22 @@ def run_replay(bundle, decide, policy: dict, per_hour: int = 50, seed: int = 11,
 
     tx["replay_hour"] = ((tx["ts"] - tx["ts"].min()) // 3600).astype(int).clip(0, hours - 1)
     sev = json.loads(Path(cfg.scenario).read_text())["severity_by_hour"]
+    grouped = {int(h): g for h, g in tx.groupby("replay_hour")}
     by_hour = []
-    for h, g in tx.groupby("replay_hour"):
-        by_hour.append({"hour": int(h), "severity": int(sev[h]),
-                        "legacy": _counters(g, "legacy_release", "legacy_decision"),
-                        "nyaya": _counters(g, "nyaya_release", "nyaya_decision")})
+    for h in range(hours):
+        g = grouped.get(h)
+        if g is not None and len(g) > 0:
+            c_leg = _counters(g, "legacy_release", "legacy_decision")
+            c_nya = _counters(g, "nyaya_release", "nyaya_decision")
+        else:
+            c_leg = _counters(tx.iloc[0:0], "legacy_release", "legacy_decision")
+            c_nya = _counters(tx.iloc[0:0], "nyaya_release", "nyaya_decision")
+        by_hour.append({
+            "hour": h,
+            "severity": int(sev[h]) if h < len(sev) else 0,
+            "legacy": c_leg,
+            "nyaya": c_nya,
+        })
     victims = tx["population"] == "displaced"
     mule_flag = tx["p_mule"] >= float(policy["theta_mule"])
     return {

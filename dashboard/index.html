@@ -402,7 +402,7 @@
 
               <div class="flex justify-between items-center">
                 <span class="text-slate-400">Net Harm Delta (&Delta;H = H_F - H_H):</span>
-                <span id="valHarmDelta" class="font-bold text-emerald-400">-1.45</span>
+                <span id="valHarmDelta" class="font-bold text-emerald-400">-₹1,450</span>
               </div>
               <div class="text-[10px] text-slate-500">Model: <span id="xrayModelVersion">xgboost-3.4.1+torch-nnpa-v1</span></div>
             </div>
@@ -533,7 +533,7 @@
               <span class="text-slate-300 font-bold">&alpha; (Severity Exponent):</span>
               <span class="text-blue-400 font-bold" id="valAlpha">0.65</span>
             </div>
-            <input type="range" min="0.10" max="1.50" step="0.05" value="0.65" id="sliderAlpha" oninput="updatePolicySliders()" class="w-full accent-blue-500 cursor-pointer">
+            <input type="range" min="0.10" max="1.00" step="0.05" value="0.65" id="sliderAlpha" oninput="updatePolicySliders()" class="w-full accent-blue-500 cursor-pointer">
             <p class="text-[10px] text-slate-500">Exponential penalty scaling as disaster severity escalates from Tier 1 to 5.</p>
           </div>
 

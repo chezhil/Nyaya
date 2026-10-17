@@ -26,6 +26,8 @@ def _sigmoid(x):
 def conformal_set(p_fraud: float, qhat: float | None) -> list[str]:
     """Split conformal set. With two labels and qhat < 0.5 (any accurate model at 90% coverage) a set can't
     hold both labels; the uncertain middle shows up as an EMPTY set instead. Both mean "not sure"."""
+    if math.isnan(p_fraud):
+        return ["legit", "fraud"]
     if qhat is None:
         return ["legit"] if p_fraud < 0.5 else ["fraud"]
     s = []
@@ -64,8 +66,11 @@ class StubBundle:
     def score(self, row: dict, recip: dict) -> dict:
         p, top = self._a(row)
         zb = self.B_B + sum(w * float(recip.get(k, 0)) for k, w in self.W_B.items())
-        return {"p_fraud": round(p, 4), "p_fraud_raw": round(p, 4), "p_mule": round(float(_sigmoid(zb)), 4),
-                "conformal_set": ["legit", "fraud"] if 0.3 < p < 0.7 else (["legit"] if p <= 0.3 else ["fraud"]),
+        cs = ["legit", "fraud"] if (math.isnan(p) or 0.3 < p < 0.7) else (["legit"] if p <= 0.3 else ["fraud"])
+        return {"p_fraud": round(p, 4) if not math.isnan(p) else float("nan"),
+                "p_fraud_raw": round(p, 4) if not math.isnan(p) else float("nan"),
+                "p_mule": round(float(_sigmoid(zb)), 4),
+                "conformal_set": cs,
                 "contribs": top}
 
     def score_legacy_raw(self, row: dict) -> float:
@@ -120,8 +125,13 @@ class RealBundle:
         m.load_state_dict(torch.load(self.dir / "model_b.pt", map_location="cpu"))
         m.eval()
         nnpa = bool(getattr(torch, "nnpa", None) and torch.nnpa.is_available())
-        self.mule_device = "nnpa" if (want == "nnpa" or (want == "auto" and nnpa)) else "cpu"
-        self.mule = m.to(self.mule_device)
+        target_device = "nnpa" if (nnpa and (want == "nnpa" or want == "auto")) else "cpu"
+        try:
+            self.mule = m.to(target_device)
+            self.mule_device = target_device
+        except Exception:
+            self.mule = m.to("cpu")
+            self.mule_device = "cpu"
 
     def _dmatrix(self, X: np.ndarray):
         import xgboost as xgb
@@ -139,17 +149,17 @@ class RealBundle:
         return _sigmoid(out)
 
     def score(self, row: dict, recip: dict) -> dict:
-        X = np.array([[float(row[f]) for f in self.a_features]], dtype=np.float32)
+        X = np.array([[float(row.get(f, 0.0)) for f in self.a_features]], dtype=np.float32)
         dm = self._dmatrix(X)
         p_raw = float(self.booster.predict(dm)[0])
         contribs = self.booster.predict(dm, pred_contribs=True)[0][:-1]  # last column is the bias
         p = float(self.calibrate(p_raw))
-        B = np.array([[float(recip[f]) for f in MODEL_B_FEATURES]], dtype=np.float32)
+        B = np.array([[float(recip.get(f, 0.0)) for f in MODEL_B_FEATURES]], dtype=np.float32)
         return {"p_fraud": round(p, 4), "p_fraud_raw": round(p_raw, 4), "p_mule": round(float(self._mule_probs(B)[0]), 4),
                 "conformal_set": conformal_set(p, self.qhat), "contribs": _top3(self.a_features, X[0], contribs)}
 
     def score_legacy_raw(self, row: dict) -> float:
-        X = np.array([[0.0 if f in DISASTER_CONTEXT else float(row[f]) for f in self.a_features]], dtype=np.float32)
+        X = np.array([[0.0 if f in DISASTER_CONTEXT else float(row.get(f, 0.0)) for f in self.a_features]], dtype=np.float32)
         return float(self.booster.predict(self._dmatrix(X))[0])
 
     def score_batch(self, a_rows, b_rows) -> dict:
@@ -175,7 +185,12 @@ def load_bundle(artifacts: Path = ARTIFACTS):
         b = StubBundle()
         b.fallback_reason = f"missing artifacts: {missing}"
         return b
-    t = time.perf_counter()
-    b = RealBundle(artifacts)
-    b.load_ms = round((time.perf_counter() - t) * 1000, 1)
-    return b
+    try:
+        t = time.perf_counter()
+        b = RealBundle(artifacts)
+        b.load_ms = round((time.perf_counter() - t) * 1000, 1)
+        return b
+    except Exception as e:
+        b = StubBundle()
+        b.fallback_reason = f"artifact load failed ({type(e).__name__}): {e}"
+        return b

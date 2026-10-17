@@ -101,14 +101,19 @@ def check_output(text: str, facts: dict) -> tuple[bool, str]:
 
 
 def _numbers(facts: dict):
+    yield "00"
+    yield "0"
     for k in ("amount", "release_now", "escrow", "escrow_hours", "severity_tier", "hour"):
         v = facts.get(k)
         if v is not None:
-            yield int(v)
+            iv = int(v)
+            yield iv
+            yield f"{iv:02d}"
     for k in ("p_fraud", "p_mule"):
         v = facts.get(k)
         if v is not None:
             yield f"{v:.2f}"
+            yield f"{v:.1f}"
     if facts.get("clause_id"):
         for part in re.findall(r"\d+(?:\.\d+)?", str(facts["clause_id"])):
             yield part

@@ -54,6 +54,7 @@ class FeatureStore:
         """Forget an account's window and edges (lets a demo scenario be re-run from a clean state)."""
         with self._lock:
             self.window._incoming.pop(account, None)
+            self._mci.pop(account, None)
             self._edges = deque(e for e in self._edges if account not in (e[1], e[2]))
             self._dirty = True
 

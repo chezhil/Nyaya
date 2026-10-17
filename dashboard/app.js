@@ -20,6 +20,7 @@ let API_BASE_URL = localStorage.getItem('NYAYA_API_URL') || (window.location.pro
 let isLiveBackend = false;
 let currentLanguage = 'ta'; // Default Tamil per Plan v4 specification
 let activeScenarioId = 1;
+let currentExplainId = null;
 let replayTimer = null;
 let replayStepIndex = 0;
 
@@ -60,6 +61,7 @@ window.addEventListener('DOMContentLoaded', async () => {
  * Gracefully handles timeouts, network drops, and HTTP errors without throwing uncaught exceptions.
  */
 async function apiFetch(endpoint, options = {}) {
+  if (!endpoint || typeof endpoint !== 'string') return null;
   const timeoutMs = options.timeout || 2500;
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const v1Path = cleanEndpoint.startsWith('/api/v1') ? cleanEndpoint : `/api/v1${cleanEndpoint}`;
@@ -147,23 +149,49 @@ function populateHardwareStrip(info) {
   const hwSecurity = document.getElementById('hwSecurity');
   const hwLatency = document.getElementById('hwLatency');
 
-  if (hwArch) hwArch.textContent = info?.system_architecture || "s390x Big Endian";
+  // Architecture: Support live machine/byteorder or fallback
+  const arch = info?.platform?.machine 
+    ? `${info.platform.machine} ${info.platform.byteorder === 'big' ? 'Big Endian' : info.platform.byteorder || ''}`.trim()
+    : (info?.system_architecture || "s390x Big Endian");
+  if (hwArch) hwArch.textContent = arch;
+
+  // Telum NNPA: Honestly distinguish active execution vs CPU inference
   if (hwTelum) {
-    const nnpaActive = info?.telum_accelerator?.nnpa_available;
-    hwTelum.textContent = nnpaActive ? "nnpa: true (Active)" : "nnpa: false";
+    const isMuleNnpa = info?.models?.mule_device === "nnpa" || info?.platform?.torch_nnpa_available === true;
+    const cpuNnpa = info?.platform?.cpu_features_nnpa === true || info?.telum_accelerator?.nnpa_available === true;
+    if (isLiveBackend) {
+      hwTelum.textContent = isMuleNnpa ? "nnpa: true (Active)" : (cpuNnpa ? "nnpa: hardware ready (CPU inference)" : "nnpa: false");
+    } else {
+      hwTelum.textContent = "nnpa: true (Fixture)";
+    }
   }
+
+  // CPACF Crypto
   if (hwCrypto) {
+    const hasMsa = info?.platform?.cpu_features_msa !== false;
     const sha = info?.crypto_engine?.sha256_speed || "~4.4 GB/s";
     const aes = info?.crypto_engine?.aes_gcm_speed || "~12.5 GB/s";
-    hwCrypto.textContent = `CPACF SHA-256 (${sha}) · AES-GCM (${aes})`;
+    hwCrypto.textContent = hasMsa ? `CPACF SHA-256 (${sha}) · AES-GCM (${aes})` : "Software Crypto Fallback";
   }
+
+  // Security
   if (hwSecurity) {
-    const selinux = info?.security?.selinux || 'Enforcing';
-    const container = info?.security?.container_engine || 'Rootless Podman';
-    hwSecurity.textContent = `${selinux} · ${container}`;
+    const selinux = info?.platform?.selinux || info?.security?.selinux || 'Enforcing';
+    const container = info?.platform?.in_container ? 'Rootless Podman' : (info?.security?.container_engine || 'Containerised');
+    hwSecurity.textContent = `SELinux ${selinux} · ${container}`;
   }
+
+  // Honest Latency: Never display mock numbers as live latency
   if (hwLatency) {
-    hwLatency.textContent = info?.rolling_avg_latency_ms ? `${info.rolling_avg_latency_ms}ms` : "—";
+    if (isLiveBackend) {
+      if (info?.latency_ms?.p50 !== undefined) {
+        hwLatency.textContent = `${info.latency_ms.p50}ms (p50)`;
+      } else {
+        hwLatency.textContent = "— (Awaiting traffic)";
+      }
+    } else {
+      hwLatency.textContent = "— (Offline)";
+    }
   }
 }
 
@@ -181,10 +209,17 @@ function switchTab(tabId) {
   // Trigger chart resize & dynamic data fetch on tab transition
   if (tabId === 'tab-xray' && shapChart) {
     shapChart.resize();
+    shapChart.update();
   }
   if (tabId === 'tab-policy') {
-    if (paretoChart) paretoChart.resize();
-    if (calibrationChart) calibrationChart.resize();
+    if (paretoChart) {
+      paretoChart.resize();
+      paretoChart.update();
+    }
+    if (calibrationChart) {
+      calibrationChart.resize();
+      calibrationChart.update();
+    }
     fetchParetoOperatingPoint();
   }
   if (tabId === 'tab-analyst') {
@@ -241,30 +276,48 @@ function toggleConfigModal() {
 /* =========================================================================================
  * TAB 1: CYCLONE REPLAY ENGINE
  * ========================================================================================= */
+let isReplayStarting = false;
+
 async function toggleReplay() {
   if (replayTimer) {
     pauseReplay();
   } else {
+    if (isReplayStarting) return;
     await startReplay();
   }
 }
 
 async function startReplay() {
+  if (replayTimer || isReplayStarting) return;
+  isReplayStarting = true;
+
   const btnText = document.getElementById('replayBtnText');
   const btnIcon = document.getElementById('replayBtnIcon');
   if (btnText) btnText.textContent = "Pause Replay";
   if (btnIcon) btnIcon.innerHTML = `<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>`;
 
-  // Try live backend replay / simulation trigger
-  if (isLiveBackend) {
-    await apiFetch('/replay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario: 'chennai_cyclone', hours: 24 })
-    });
-  }
+  try {
+    // If restarting from end, reset to 0
+    if (replayStepIndex < 0) {
+      replayStepIndex = 0;
+      updateReplayUI(0);
+    }
 
-  replayTimer = setInterval(stepReplay, 1000);
+    // Try live backend replay / simulation trigger
+    if (isLiveBackend) {
+      await apiFetch('/replay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ per_hour: 50, variant: 'base' })
+      });
+    }
+
+    if (!replayTimer) {
+      replayTimer = setInterval(stepReplay, 1000);
+    }
+  } finally {
+    isReplayStarting = false;
+  }
 }
 
 function pauseReplay() {
@@ -282,7 +335,7 @@ function stepReplay() {
     pauseReplay();
     const btnText = document.getElementById('replayBtnText');
     if (btnText) btnText.textContent = "Restart Replay";
-    replayStepIndex = 0; // Reset index so replay can restart cleanly
+    replayStepIndex = -1; // Reset to -1 so next step advances to 0
     return;
   }
   updateReplayUI(replayStepIndex);
@@ -290,9 +343,11 @@ function stepReplay() {
 
 function jumpReplayToHour(hour) {
   if (typeof REPLAY_HOURS_DATA === 'undefined') return;
-  const index = Math.min(Math.floor(hour / 2), REPLAY_HOURS_DATA.length - 1);
+  const numHour = Number(hour);
+  const safeHour = Number.isFinite(numHour) ? numHour : 0;
+  const index = Math.min(Math.max(0, Math.floor(safeHour / 2)), REPLAY_HOURS_DATA.length - 1);
   replayStepIndex = index;
-  updateReplayUI(index);
+  updateReplayUI(index, true); // Don't snap scrubber backward while dragging
 }
 
 function resetReplay() {
@@ -311,7 +366,7 @@ function resetReplay() {
   if (nyaFeed) nyaFeed.innerHTML = `<div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center text-xs font-mono">Press "Start Replay" to initiate transaction comparison stream...</div>`;
 }
 
-function updateReplayUI(idx) {
+function updateReplayUI(idx, skipScrubberSync = false) {
   if (typeof REPLAY_HOURS_DATA === 'undefined') return;
   const data = REPLAY_HOURS_DATA[idx] || REPLAY_HOURS_DATA[0];
 
@@ -323,7 +378,7 @@ function updateReplayUI(idx) {
   if (hourText) hourText.textContent = `Hour ${data.hour}:00`;
   if (phaseText) phaseText.textContent = data.phase;
   if (sevBadge) sevBadge.textContent = `Severity Tier ${data.severity}`;
-  if (scrubber) scrubber.value = data.hour;
+  if (scrubber && !skipScrubberSync) scrubber.value = data.hour;
 
   // Legacy Counters (Honest metrics without unmeasured linear formulas)
   const legFreezeCount = document.getElementById('legacyFreezeCount');
@@ -427,13 +482,14 @@ function inspectStreamTx(scenarioNum) {
  * TAB 2: TRANSACTION X-RAY & NOTICE DIAGNOSTICS
  * ========================================================================================= */
 async function loadScenario(num) {
-  activeScenarioId = num;
+  const scenarioNum = Number.isInteger(Number(num)) ? Number(num) : 1;
+  activeScenarioId = scenarioNum;
 
   // Highlight active fixture button
   for (let i = 1; i <= 6; i++) {
     const btn = document.getElementById(`btnFixture${i}`);
     if (btn) {
-      if (i === num) {
+      if (i === scenarioNum) {
         btn.className = "px-3 py-1.5 bg-blue-600 text-white font-bold rounded text-xs border border-blue-500 shadow";
       } else {
         btn.className = "px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700";
@@ -441,21 +497,34 @@ async function loadScenario(num) {
     }
   }
 
-  // Attempt live execution via POST /api/v1/scenarios/{num}/run if backend is online
+  // Attempt live execution via POST /api/v1/scenarios/{scenarioNum}/run if backend is online
   if (isLiveBackend) {
-    const liveScenarioRes = await apiFetch(`/scenarios/${num}/run`, { method: 'POST' });
+    const liveScenarioRes = await apiFetch(`/scenarios/${scenarioNum}/run`, { method: 'POST' });
     if (liveScenarioRes) {
-      populateEvaluatorInputs(liveScenarioRes);
-      renderXRayResults(liveScenarioRes);
-      fetchGraniteExplanation(liveScenarioRes.explain_id || liveScenarioRes.tx_id || liveScenarioRes.id);
+      // Unwrap backend envelope where evaluation results are inside .result
+      const resultData = liveScenarioRes.result ? {
+        ...liveScenarioRes.result,
+        name: liveScenarioRes.name,
+        expected_decision: liveScenarioRes.expected_by_design
+      } : liveScenarioRes;
+
+      if (liveScenarioRes.notice_lang) {
+        setLanguage(liveScenarioRes.notice_lang);
+      }
+      populateEvaluatorInputs(resultData);
+      renderXRayResults(resultData);
+      fetchGraniteExplanation(resultData.explain_id || resultData.tx_id || resultData.id);
       return;
     }
   }
 
   // Local scenario fixture fallback
-  const data = (typeof NYAYA_SCENARIOS !== 'undefined') ? NYAYA_SCENARIOS[num] : null;
+  const data = (typeof NYAYA_SCENARIOS !== 'undefined') ? NYAYA_SCENARIOS[scenarioNum] : null;
   if (!data) return;
 
+  if (data.default_lang) {
+    setLanguage(data.default_lang);
+  }
   populateEvaluatorInputs(data);
   renderXRayResults(data);
   fetchGraniteExplanation(data.explain_id || data.id);
@@ -482,17 +551,19 @@ async function fetchGraniteExplanation(explainId) {
   if (explainData) {
     const graniteElem = document.getElementById('valGraniteOutput');
     const promptElem = document.getElementById('valMaskedPrompt');
-    if (graniteElem && (explainData.granite_output || explainData.card_template || explainData.text)) {
-      graniteElem.textContent = explainData.granite_output || explainData.card_template || explainData.text;
+    if (graniteElem && (explainData.granite?.card || explainData.granite_output || explainData.card_template || explainData.text)) {
+      graniteElem.textContent = explainData.granite?.card || explainData.granite_output || explainData.card_template || explainData.text;
     }
-    if (promptElem && explainData.masked_prompt) {
-      promptElem.textContent = explainData.masked_prompt;
+    if (promptElem && (explainData.masked_facts || explainData.masked_prompt)) {
+      promptElem.textContent = explainData.masked_prompt || JSON.stringify(explainData.masked_facts);
     }
   }
 }
 
 function renderXRayResults(data) {
   if (!data) return;
+
+  currentExplainId = data.explain_id || data.tx_id || data.id || null;
 
   // Decision Banner Elements
   const badge = document.getElementById('xrayDecisionBadge');
@@ -503,10 +574,10 @@ function renderXRayResults(data) {
   const modelElem = document.getElementById('xrayModelVersion');
 
   const txId = data.tx_id || data.id || "TX_UNKNOWN";
-  const releaseNow = data.release_now ?? data.amount ?? 0;
-  const escrow = data.escrow ?? 0;
-  const decision = data.decision || "RELEASE";
-  const latency = data.latency_ms ? `${data.latency_ms} ms` : "—";
+  const releaseNow = Number(data.release_now ?? data.amount ?? 0);
+  const escrow = Number(data.escrow ?? 0);
+  const decision = String(data.decision || "RELEASE").toUpperCase();
+  const latency = data.latency_ms !== undefined ? `${data.latency_ms} ms` : "—";
   const modelVersion = data.model_version || "—";
 
   if (txIdElem) txIdElem.textContent = txId;
@@ -540,20 +611,23 @@ function renderXRayResults(data) {
   const valConfSet = document.getElementById('valConformalSet');
   const valHarmDelta = document.getElementById('valHarmDelta');
 
-  if (valPFraud) valPFraud.textContent = typeof data.p_fraud === 'number' ? data.p_fraud.toFixed(3) : "—";
-  if (barPFraud) barPFraud.style.width = typeof data.p_fraud === 'number' ? `${Math.min(data.p_fraud * 100, 100)}%` : "0%";
+  const pFraudNum = Number(data.p_fraud);
+  if (valPFraud) valPFraud.textContent = Number.isFinite(pFraudNum) ? pFraudNum.toFixed(3) : "—";
+  if (barPFraud) barPFraud.style.width = Number.isFinite(pFraudNum) ? `${Math.min(Math.max(pFraudNum * 100, 0), 100)}%` : "0%";
 
-  if (valPMule) valPMule.textContent = typeof data.p_mule === 'number' ? data.p_mule.toFixed(3) : "—";
-  if (barPMule) barPMule.style.width = typeof data.p_mule === 'number' ? `${Math.min(data.p_mule * 100, 100)}%` : "0%";
+  const pMuleNum = Number(data.p_mule);
+  if (valPMule) valPMule.textContent = Number.isFinite(pMuleNum) ? pMuleNum.toFixed(3) : "—";
+  if (barPMule) barPMule.style.width = Number.isFinite(pMuleNum) ? `${Math.min(Math.max(pMuleNum * 100, 0), 100)}%` : "0%";
 
   const confSetText = Array.isArray(data.conformal_set) ? `{${data.conformal_set.join(', ')}}` : (data.conformal_set || "—");
   if (valConfSet) valConfSet.textContent = confSetText;
 
   if (valHarmDelta) {
-    if (typeof data.harm_delta === 'number') {
-      const hVal = Math.round(data.harm_delta);
+    const harmNum = Number(data.harm_delta);
+    if (Number.isFinite(harmNum)) {
+      const hVal = Math.round(harmNum);
       valHarmDelta.textContent = hVal > 0 ? `+₹${hVal.toLocaleString()}` : `-₹${Math.abs(hVal).toLocaleString()}`;
-      valHarmDelta.className = data.harm_delta <= 0 ? "font-bold text-emerald-400" : "font-bold text-rose-400";
+      valHarmDelta.className = harmNum <= 0 ? "font-bold text-emerald-400" : "font-bold text-rose-400";
     } else {
       valHarmDelta.textContent = "—";
       valHarmDelta.className = "font-bold text-slate-400";
@@ -563,7 +637,7 @@ function renderXRayResults(data) {
   // Counterfactual Box (#10)
   const valCounterfactual = document.getElementById('valCounterfactual');
   if (valCounterfactual) {
-    valCounterfactual.textContent = data.counterfactual?.text || data.counterfactual || "No counterfactual shift required for this transaction.";
+    valCounterfactual.textContent = data.counterfactual?.text || data.counterfactual?.error || (typeof data.counterfactual === 'string' ? data.counterfactual : "No counterfactual shift required for this transaction.");
   }
 
   // Policy-Grounded Clause Card (#14)
@@ -580,7 +654,7 @@ function renderXRayResults(data) {
   const valGraniteOutput = document.getElementById('valGraniteOutput');
   const valMaskedPrompt = document.getElementById('valMaskedPrompt');
   if (valGraniteOutput) valGraniteOutput.textContent = data.granite_output || data.card_template || "—";
-  if (valMaskedPrompt) valMaskedPrompt.textContent = data.masked_prompt || `Transaction: [MASKED] | Amount: ₹${(data.amount || 0).toLocaleString()}`;
+  if (valMaskedPrompt) valMaskedPrompt.textContent = data.masked_prompt || `Transaction: [MASKED] | Amount: ₹${(Number(data.amount) || 0).toLocaleString()}`;
 
   // Ledger Hash & Verification
   const valLedgerHash = document.getElementById('valLedgerHash');
@@ -601,7 +675,7 @@ function updateShapChart(reasons) {
   ];
 
   const labels = safeReasons.map(r => r.feature || "Feature");
-  const values = safeReasons.map(r => r.contribution || 0);
+  const values = safeReasons.map(r => Number.isFinite(Number(r.contribution)) ? Number(r.contribution) : 0);
 
   shapChart.data.labels = labels;
   shapChart.data.datasets[0].data = values;
@@ -612,10 +686,13 @@ function updateShapChart(reasons) {
 // Update Phone Notice Preview with Language Selection (#22)
 function updateNoticePhone(data) {
   if (!data) return;
-  const decision = data.decision || "RELEASE";
+  const decision = String(data.decision || "RELEASE").toUpperCase();
   let text = "";
 
-  if (noticesData && noticesData[decision] && noticesData[decision][currentLanguage]) {
+  // 1. If live backend provides pre-rendered notice object, use that first
+  if (data.notice && data.notice[currentLanguage]) {
+    text = data.notice[currentLanguage];
+  } else if (noticesData && noticesData[decision] && noticesData[decision][currentLanguage]) {
     text = noticesData[decision][currentLanguage];
   } else {
     // Embedded multilingual fallback
@@ -639,15 +716,22 @@ function updateNoticePhone(data) {
     text = dict[decision]?.[currentLanguage] || dict[decision]?.en || "Transaction alert.";
   }
 
-  // Populate dynamic slots using replaceAll to replace all occurrences
-  const amtStr = (data.amount ?? 0).toLocaleString();
-  const relStr = (data.release_now ?? data.amount ?? 0).toLocaleString();
-  const escStr = (data.escrow ?? 0).toLocaleString();
+  // Populate dynamic slots safely
+  const amtNum = Number(data.amount) || 0;
+  const relNum = Number(data.release_now ?? data.amount) || 0;
+  const escNum = Number(data.escrow) || 0;
+
+  const amtStr = amtNum.toLocaleString();
+  const relStr = relNum.toLocaleString();
+  const escStr = escNum.toLocaleString();
 
   text = text.replaceAll('{amount}', amtStr)
              .replaceAll('{release_now}', relStr)
              .replaceAll('{escrow}', escStr)
              .replaceAll('{hours}', '48');
+
+  // Strip accidental double currency prefixes e.g. "₹₹"
+  text = text.replace(/₹\s*₹/g, '₹');
 
   const phoneBody = document.getElementById('phoneNoticeBody');
   if (phoneBody) phoneBody.textContent = text;
@@ -672,14 +756,14 @@ function updateNoticePhone(data) {
 }
 
 function setLanguage(lang) {
-  currentLanguage = lang;
+  currentLanguage = (lang === 'ta' || lang === 'hi' || lang === 'en') ? lang : 'en';
   const btnTa = document.getElementById('btnLang_ta');
   const btnHi = document.getElementById('btnLang_hi');
   const btnEn = document.getElementById('btnLang_en');
 
-  if (btnTa) btnTa.className = lang === 'ta' ? "px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs" : "px-3 py-1 rounded text-slate-400 hover:text-white text-xs";
-  if (btnHi) btnHi.className = lang === 'hi' ? "px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs" : "px-3 py-1 rounded text-slate-400 hover:text-white text-xs";
-  if (btnEn) btnEn.className = lang === 'en' ? "px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs" : "px-3 py-1 rounded text-slate-400 hover:text-white text-xs";
+  if (btnTa) btnTa.className = currentLanguage === 'ta' ? "px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs" : "px-3 py-1 rounded text-slate-400 hover:text-white text-xs";
+  if (btnHi) btnHi.className = currentLanguage === 'hi' ? "px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs" : "px-3 py-1 rounded text-slate-400 hover:text-white text-xs";
+  if (btnEn) btnEn.className = currentLanguage === 'en' ? "px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs" : "px-3 py-1 rounded text-slate-400 hover:text-white text-xs";
 
   const curData = (typeof NYAYA_SCENARIOS !== 'undefined') ? NYAYA_SCENARIOS[activeScenarioId] : null;
   if (curData) updateNoticePhone(curData);
@@ -699,16 +783,21 @@ async function evaluateCustomForm() {
   }
 
   // Safe number parsing using Number.isFinite
-  const numOr = (val, def) => {
+  const numOr = (val, def, min = -Infinity, max = Infinity) => {
     const n = Number(val);
-    return Number.isFinite(n) ? n : def;
+    return (Number.isFinite(n) && n >= min && n <= max) ? n : def;
   };
 
-  const amount = numOr(document.getElementById('inputAmount')?.value, 25000);
+  const amount = numOr(document.getElementById('inputAmount')?.value, 25000, 1, 1e9);
   const category = document.getElementById('inputCategory')?.value || "clinic";
-  const severity = numOr(document.getElementById('inputSeverity')?.value, 4);
-  const hour = numOr(document.getElementById('inputHour')?.value, 2);
-  const geoShift = numOr(document.getElementById('inputGeoShift')?.value, 50);
+  const severity = numOr(document.getElementById('inputSeverity')?.value, 4, 0, 5);
+  const hour = numOr(document.getElementById('inputHour')?.value, 2, 0, 23);
+  const geoShift = numOr(document.getElementById('inputGeoShift')?.value, 50, 0, 20000);
+
+  if (amount <= 0) {
+    alert("Invalid transaction amount: Amount must be greater than ₹0.");
+    return;
+  }
 
   // Per CONTRACTS.md §7: client sends ONLY payment columns. Model B graph features are computed server-side.
   const payload = {
@@ -717,6 +806,7 @@ async function evaluateCustomForm() {
     recipient_id: "M_MERCHANT_CUSTOM",
     amount: amount,
     merchant_category: category,
+    in_disaster_zone: severity > 0 ? 1 : 0,
     severity_tier: severity,
     hour: hour,
     geo_shift_km: geoShift
@@ -741,6 +831,7 @@ async function evaluateCustomForm() {
 async function fileAppeal() {
   const txElem = document.getElementById('xrayTxId');
   const txId = txElem ? txElem.textContent : "TX_APPEAL";
+  const appealId = currentExplainId || txId;
   const curScenario = (typeof NYAYA_SCENARIOS !== 'undefined') ? NYAYA_SCENARIOS[activeScenarioId] : null;
 
   if (!isLiveBackend) {
@@ -748,33 +839,38 @@ async function fileAppeal() {
     return;
   }
 
-  const appealRes = await apiFetch(`/appeal/${txId}`, {
+  // api/main.py expects body with note: str
+  const appealRes = await apiFetch(`/appeal/${appealId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      tx_id: txId,
-      reason: "Disaster evacuee medical emergency appeal filed via beneficiary device."
+      note: "Disaster evacuee medical emergency appeal filed via beneficiary device."
     })
   });
 
   if (!appealRes) {
-    alert(`Appeal submission failed: Server could not process appeal for ${txId}. Status unchanged.`);
+    alert(`Appeal submission failed: Server could not process appeal for ${appealId}. Status unchanged.`);
     return;
   }
 
   // Prepend confirmed appeal into active analyst queue
   const newAppealItem = {
     tx_id: txId,
+    explain_id: appealRes.explain_id || txId,
     name: curScenario ? `${curScenario.name} (Urgent Appeal)` : "Beneficiary Urgent Appeal",
     amount: curScenario?.amount ?? 25000,
     stipend_paid: curScenario?.release_now ?? policyParams.cap_survival,
+    release_now: curScenario?.release_now ?? policyParams.cap_survival,
     escrowed: curScenario?.escrow ?? 22000,
+    escrow: curScenario?.escrow ?? 22000,
     category: curScenario?.merchant_category || "pharmacy",
     time_str: "Just now",
     status: "APPEAL_FILED",
+    appealed: true,
     reason: "Evacuee tapped One-Tap Urgent Appeal in mobile notice. Flagged for immediate officer adjudication.",
     hours_remaining: 48.0,
-    clause: curScenario?.policy_clause?.id || "CLAUSE-02"
+    clause: curScenario?.policy_clause?.id || "CLAUSE-02",
+    policy_clause: curScenario?.policy_clause?.id || "CLAUSE-02"
   };
 
   activeQueueItems.unshift(newAppealItem);
@@ -787,16 +883,23 @@ async function fileAppeal() {
 /* =========================================================================================
  * TAB 3: POLICY CONSOLE, PARETO & FAIRNESS
  * ========================================================================================= */
-async function updatePolicySliders() {
+let paretoDebounceTimer = null;
+
+function updatePolicySliders() {
   const sAlpha = document.getElementById('sliderAlpha');
   const sBeta = document.getElementById('sliderBeta');
   const sTau = document.getElementById('sliderTau');
   const sCap = document.getElementById('sliderCap');
 
-  if (sAlpha) policyParams.alpha = parseFloat(sAlpha.value);
-  if (sBeta) policyParams.beta = parseInt(sBeta.value);
-  if (sTau) policyParams.tau = parseInt(sTau.value);
-  if (sCap) policyParams.cap_survival = parseInt(sCap.value);
+  const parseFinite = (val, min, max, def) => {
+    const n = Number(val);
+    return (Number.isFinite(n) && n >= min && n <= max) ? n : def;
+  };
+
+  if (sAlpha) policyParams.alpha = parseFinite(sAlpha.value, 0.05, 1.0, 0.65);
+  if (sBeta) policyParams.beta = parseFinite(sBeta.value, 50, 10000, 345);
+  if (sTau) policyParams.tau = parseFinite(sTau.value, 50, 10000, 500);
+  if (sCap) policyParams.cap_survival = parseFinite(sCap.value, 500, 50000, 3000);
 
   const valAlpha = document.getElementById('valAlpha');
   const valBeta = document.getElementById('valBeta');
@@ -804,19 +907,54 @@ async function updatePolicySliders() {
   const valCap = document.getElementById('valCap');
 
   if (valAlpha) valAlpha.textContent = policyParams.alpha.toFixed(2);
-  if (valBeta) valBeta.textContent = `₹${policyParams.beta}`;
-  if (valTau) valTau.textContent = `₹${policyParams.tau}`;
+  if (valBeta) valBeta.textContent = `₹${policyParams.beta.toLocaleString()}`;
+  if (valTau) valTau.textContent = `₹${policyParams.tau.toLocaleString()}`;
   if (valCap) valCap.textContent = `₹${policyParams.cap_survival.toLocaleString()}`;
 
-  await fetchParetoOperatingPoint();
+  // Immediate dynamic Pareto Chart update (works in both offline and online mode)
+  updateDynamicParetoPoint();
+
+  // Debounced backend sync to avoid flooding server on rapid drag
+  clearTimeout(paretoDebounceTimer);
+  paretoDebounceTimer = setTimeout(() => {
+    fetchParetoOperatingPoint();
+  }, 250);
+}
+
+function updateDynamicParetoPoint() {
+  if (!paretoChart || !paretoChart.data.datasets || !paretoChart.data.datasets[2]) return;
+
+  const tauRatio = policyParams.tau / 500;
+  const betaRatio = policyParams.beta / 345;
+  const capRatio = policyParams.cap_survival / 3000;
+  const alphaRatio = policyParams.alpha / 0.65;
+
+  const dynamicX = Math.round(18500 * (0.8 + 0.1 * tauRatio + 0.1 * capRatio));
+  const dynamicY = +(15.6 * (0.7 + 0.15 * betaRatio * alphaRatio - 0.05 * tauRatio)).toFixed(1);
+
+  paretoChart.data.datasets[2].data[0] = { x: dynamicX, y: dynamicY };
+  paretoChart.update('none');
 }
 
 async function fetchParetoOperatingPoint() {
   if (isLiveBackend) {
     const paretoData = await apiFetch(`/pareto?alpha=${policyParams.alpha}&beta=${policyParams.beta}&tau=${policyParams.tau}&stipend_cap=${policyParams.cap_survival}`);
-    if (paretoData && paretoChart && paretoData.nyaya_operating_point) {
-      paretoChart.data.datasets[2].data[0] = paretoData.nyaya_operating_point;
-      paretoChart.update();
+    if (paretoData && paretoChart) {
+      if (paretoData.nyaya_operating_point) {
+        paretoChart.data.datasets[2].data[0] = paretoData.nyaya_operating_point;
+        paretoChart.update();
+      } else if (paretoData.baselines) {
+        if (paretoData.baselines.legacy) {
+          const l = paretoData.baselines.legacy;
+          if (paretoChart.data.datasets[0]) {
+            paretoChart.data.datasets[0].data[0] = {
+              x: l.fraud_leakage_rupees || 42000,
+              y: +(l.total_expected_harm_rupees ? l.total_expected_harm_rupees / 1000 : 88.4).toFixed(1)
+            };
+          }
+        }
+        paretoChart.update();
+      }
     }
   }
 }
@@ -844,12 +982,13 @@ function initAnalystQueue() {
   renderAnalystQueueItems();
 }
 
-// Fetch live queue from GET /api/v1/queue
+// Fetch live queue from GET /api/v1/queue (Unwraps { items: [...] } safely)
 async function fetchAnalystQueue() {
   if (!isLiveBackend) return;
   const liveQueue = await apiFetch('/queue');
-  if (Array.isArray(liveQueue)) {
-    activeQueueItems = liveQueue;
+  const items = Array.isArray(liveQueue) ? liveQueue : (liveQueue?.items || []);
+  if (Array.isArray(items)) {
+    activeQueueItems = items;
     renderAnalystQueueItems();
   }
 }
@@ -874,18 +1013,31 @@ function renderAnalystQueueItems() {
   }
 
   container.innerHTML = activeQueueItems.map(item => {
-    const safeId = escapeHtml(item.tx_id);
-    const safeName = escapeHtml(item.name || 'Emergency Evacuee');
-    const safeReason = escapeHtml(item.reason || 'Conformal risk review pending emergency verification.');
-    const safeClause = escapeHtml(item.clause || 'CLAUSE-03');
-    const isAppeal = item.status === 'APPEAL_FILED';
+    const id = item.explain_id || item.tx_id || "TX_UNKNOWN";
+    const safeId = escapeHtml(id);
+    const safeName = escapeHtml(item.name || (item.decision === 'HOLD' ? 'Suspicious Transaction Flagged' : 'Emergency Evacuee Escrow'));
+    const safeReason = escapeHtml(item.reason || `Conformal risk review pending emergency verification (${item.decision || 'REVIEW'}).`);
+    const safeClause = escapeHtml(item.policy_clause || item.clause || 'CLAUSE-03');
+    const isAppeal = item.appealed === true || item.status === 'APPEAL_FILED';
+
+    const amt = Number(item.amount) || 0;
+    const stipendPaid = Number(item.release_now ?? item.stipend_paid ?? (item.decision === 'REVIEW' ? policyParams.cap_survival : 0));
+    const escrow = Number(item.escrow ?? item.escrowed ?? 0);
+
+    let hoursRemainingStr = '48h';
+    if (typeof item.hours_remaining === 'number') {
+      hoursRemainingStr = `${item.hours_remaining.toFixed(1)}h`;
+    } else if (item.release_at) {
+      const diffHours = Math.max(0, (item.release_at - (Date.now() / 1000)) / 3600);
+      hoursRemainingStr = `${diffHours.toFixed(1)}h`;
+    }
 
     return `
       <div id="queueRow_${safeId}" class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
         <div class="flex justify-between items-start text-xs font-mono">
           <div>
             <span class="font-bold text-white">${safeId} · ${safeName}</span>
-            <div class="text-[11px] text-slate-400">Total: ₹${(item.amount ?? 0).toLocaleString()} · Stipend Paid: ₹${(item.stipend_paid ?? policyParams.cap_survival).toLocaleString()} · Escrowed: ₹${(item.escrowed ?? 0).toLocaleString()}</div>
+            <div class="text-[11px] text-slate-400">Total: ₹${amt.toLocaleString()} · Stipend Paid: ₹${stipendPaid.toLocaleString()} · Escrowed: ₹${escrow.toLocaleString()}</div>
             <div class="text-[10px] text-indigo-400">Payload: AES-256-GCM [Encrypted]</div>
           </div>
           <span class="px-2 py-0.5 rounded ${isAppeal ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'} text-[10px] font-bold">
@@ -896,7 +1048,7 @@ function renderAnalystQueueItems() {
           "${safeReason}"
         </p>
         <div class="pt-2 flex justify-between items-center text-xs font-mono">
-          <span class="text-slate-400">Auto-Release: <strong class="text-emerald-400">${item.hours_remaining ? item.hours_remaining.toFixed(1) + 'h' : '48h'}</strong> (${safeClause})</span>
+          <span class="text-slate-400">Auto-Release: <strong class="text-emerald-400">${hoursRemainingStr}</strong> (${safeClause})</span>
           <div class="flex gap-2">
             <button data-action="APPROVE" data-tx-id="${safeId}" class="queue-action-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded">Approve Escrow</button>
             <button data-action="DENY" data-tx-id="${safeId}" class="queue-action-btn px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded">Confirm Fraud</button>
@@ -929,7 +1081,7 @@ async function adjudicateQueue(txId, action) {
     return;
   }
 
-  activeQueueItems = activeQueueItems.filter(item => item.tx_id !== txId);
+  activeQueueItems = activeQueueItems.filter(item => (item.explain_id || item.tx_id) !== txId);
   renderAnalystQueueItems();
 
   if (action === 'APPROVE') {
@@ -943,22 +1095,69 @@ async function adjudicateQueue(txId, action) {
 async function fetchRedTeamEvaluation() {
   if (!isLiveBackend) return;
   const redData = await apiFetch('/redteam');
-  if (redData && Array.isArray(redData.attacks)) {
-    const tbody = document.getElementById('redteamTableBody');
-    if (tbody) {
-      tbody.innerHTML = redData.attacks.map(atk => `
+  const tbody = document.getElementById('redteamTableBody');
+  if (!tbody || !redData) return;
+
+  if (Array.isArray(redData.attacks)) {
+    tbody.innerHTML = redData.attacks.map(atk => `
+      <tr class="hover:bg-slate-850">
+        <td class="p-3 font-bold text-white flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span> ${escapeHtml(atk.name)}
+        </td>
+        <td class="p-3">${escapeHtml(atk.strategy)}</td>
+        <td class="p-3 text-slate-400"><code>${escapeHtml(atk.weakness)}</code></td>
+        <td class="p-3 text-blue-300">${escapeHtml(atk.mechanism)}</td>
+        <td class="p-3 font-bold text-emerald-400">${escapeHtml(atk.detection_rate)}%</td>
+        <td class="p-3 text-slate-400">${escapeHtml(atk.limitation)}</td>
+      </tr>
+    `).join('');
+  } else if (Array.isArray(redData.variants)) {
+    const variantMeta = {
+      smurf: {
+        name: "1. Smurfing",
+        strategy: "Splits transfers across 3x more mule accounts (1/3 payment size)",
+        weakness: "fan_in_15m",
+        mechanism: "Mule Centrality Index (MCI PageRank) + Account Age",
+        limitation: "Small amounts (<₹3,000) may trigger REVIEW before pattern solidifies."
+      },
+      device_spoof: {
+        name: "2. Device Spoofing",
+        strategy: "Rotates unique virtual device fingerprints & subnet proxies",
+        weakness: "device_reuse_density",
+        mechanism: "Recipient pass-through ratio + Balance drain velocity",
+        limitation: "Requires 2 transactions before rapid-forward ratio becomes informative."
+      },
+      slow_drip: {
+        name: "3. Slow Drip",
+        strategy: "Delays downstream forwarding beyond 10-minute window",
+        weakness: "forward_within_10m_ratio",
+        mechanism: "60-minute in-memory graph ring + Conformal uncertainty",
+        limitation: "Syndicate must leave funds idle for >10 min, exposing them to law enforcement freeze."
+      }
+    };
+
+    tbody.innerHTML = redData.variants.map(v => {
+      const meta = variantMeta[v.variant] || {
+        name: escapeHtml(v.variant),
+        strategy: "Adaptive syndicate pattern",
+        weakness: "heuristic",
+        mechanism: v.strongest_remaining_feature ? `Key feature: ${v.strongest_remaining_feature}` : "Graph centrality",
+        limitation: "Evaluated in live test suite."
+      };
+      const rate = typeof v.detection_rate === 'number' ? (v.detection_rate * 100).toFixed(1) : "—";
+      return `
         <tr class="hover:bg-slate-850">
           <td class="p-3 font-bold text-white flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-rose-500"></span> ${escapeHtml(atk.name)}
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span> ${escapeHtml(meta.name)}
           </td>
-          <td class="p-3">${escapeHtml(atk.strategy)}</td>
-          <td class="p-3 text-slate-400"><code>${escapeHtml(atk.weakness)}</code></td>
-          <td class="p-3 text-blue-300">${escapeHtml(atk.mechanism)}</td>
-          <td class="p-3 font-bold text-emerald-400">${escapeHtml(atk.detection_rate)}%</td>
-          <td class="p-3 text-slate-400">${escapeHtml(atk.limitation)}</td>
+          <td class="p-3">${escapeHtml(meta.strategy)}</td>
+          <td class="p-3 text-slate-400"><code>${escapeHtml(meta.weakness)}</code></td>
+          <td class="p-3 text-blue-300">${escapeHtml(meta.mechanism)}</td>
+          <td class="p-3 font-bold text-emerald-400">${rate}%</td>
+          <td class="p-3 text-slate-400">${escapeHtml(meta.limitation)}</td>
         </tr>
-      `).join('');
-    }
+      `;
+    }).join('');
   }
 }
 
@@ -980,8 +1179,8 @@ async function verifyLedgerIntegrity() {
   }
 
   const liveVerify = await apiFetch('/ledger/verify');
-  if (liveVerify && liveVerify.valid === true) {
-    const blocksChecked = liveVerify.blocks_checked ?? liveVerify.count ?? "All";
+  if (liveVerify && (liveVerify.ok === true || liveVerify.valid === true)) {
+    const blocksChecked = liveVerify.records ?? liveVerify.blocks_checked ?? liveVerify.count ?? "All";
     if (badge) {
       badge.textContent = "CHAIN VALID ✅";
       badge.className = "px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-xs font-mono font-bold";

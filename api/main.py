@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NYAYA", version="0.1", lifespan=lifespan,
               description="Disaster-aware fraud decisions on IBM LinuxONE")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])
 
 
 def service() -> Nyaya:
@@ -57,8 +57,8 @@ class RecipientOverride(BaseModel):
 class Payment(BaseModel):
     """Payment columns from data/schema.md. Only sender_id, recipient_id and amount are required."""
     model_config = ConfigDict(extra="ignore")
-    sender_id: str = Field(max_length=64)
-    recipient_id: str = Field(max_length=64)
+    sender_id: str = Field(min_length=1, max_length=64)
+    recipient_id: str = Field(min_length=1, max_length=64)
     amount: float = Field(gt=0, le=1e9)
     tx_id: Optional[str] = Field(default=None, max_length=64)
     ts: Optional[float | str] = None
@@ -105,29 +105,75 @@ class ReplayRequest(BaseModel):
     variant: Literal["base", "smurf", "device_spoof", "slow_drip"] = "base"
 
 
-ALLOWED_POLICY = {"alpha", "beta", "tau", "theta_mule", "stipend_cap", "escrow_hours"}
+POLICY_BOUNDS = {
+    "alpha": (0.0, 1.0),
+    "beta": (0.01, None),
+    "tau": (0.01, None),
+    "theta_mule": (0.001, 1.0),
+    "stipend_cap": (0.0, None),
+    "escrow_hours": (0.01, None),
+}
+ALLOWED_POLICY = set(POLICY_BOUNDS)
 
 v1 = "/api/v1"
 
 
 @app.post(f"{v1}/evaluate")
-def evaluate(req: EvaluateRequest, s: Nyaya = Depends(service)):
+@app.post("/evaluate")
+def evaluate(
+    req: EvaluateRequest,
+    alpha: Optional[float] = None,
+    beta: Optional[float] = None,
+    tau: Optional[float] = None,
+    stipend_cap: Optional[float] = None,
+    s: Nyaya = Depends(service),
+):
     body = req.model_dump(exclude={"policy"}, exclude_none=True)
-    overrides = {k: float(v) for k, v in (req.policy or {}).items() if k in ALLOWED_POLICY}
+    raw_policy = dict(req.policy or {})
+    if alpha is not None:
+        raw_policy["alpha"] = alpha
+    if beta is not None:
+        raw_policy["beta"] = beta
+    if tau is not None:
+        raw_policy["tau"] = tau
+    if stipend_cap is not None:
+        raw_policy["stipend_cap"] = stipend_cap
+
+    overrides = {}
+    for k, v in raw_policy.items():
+        if k in ALLOWED_POLICY and v is not None:
+            try:
+                val = float(v)
+            except (ValueError, TypeError):
+                raise HTTPException(422, f"Policy override '{k}' must be numeric, got {v!r}")
+            min_v, max_v = POLICY_BOUNDS.get(k, (None, None))
+            if min_v is not None and val < min_v:
+                raise HTTPException(422, f"Policy override '{k}' must be >= {min_v}, got {val}")
+            if max_v is not None and val > max_v:
+                raise HTTPException(422, f"Policy override '{k}' must be <= {max_v}, got {val}")
+            overrides[k] = val
+
     try:
         return s.evaluate(body, overrides)
     except ValueError as e:
         raise HTTPException(422, str(e))
+    except (RuntimeError, KeyError) as e:
+        raise HTTPException(500, f"Evaluation error: {e}")
 
 
 @app.post(f"{v1}/events")
+@app.post("/events")
 def events(evts: list[Event], s: Nyaya = Depends(service)):
     if len(evts) > 20000:
         raise HTTPException(413, "max 20000 events per call")
-    return s.ingest_events([e.model_dump(exclude_none=True) for e in evts])
+    try:
+        return s.ingest_events([e.model_dump(exclude_none=True) for e in evts])
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.get(f"{v1}/explain/{{explain_id}}")
+@app.get("/explain/{{explain_id}}")
 def explain(explain_id: str, s: Nyaya = Depends(service)):
     out = s.explain(explain_id)
     if out is None:
@@ -136,6 +182,7 @@ def explain(explain_id: str, s: Nyaya = Depends(service)):
 
 
 @app.post(f"{v1}/appeal/{{explain_id}}")
+@app.post("/appeal/{{explain_id}}")
 def appeal(explain_id: str, body: Appeal = Appeal(), s: Nyaya = Depends(service)):
     out = s.appeal(explain_id, body.note)
     if out is None:
@@ -144,16 +191,19 @@ def appeal(explain_id: str, body: Appeal = Appeal(), s: Nyaya = Depends(service)
 
 
 @app.get(f"{v1}/queue")
+@app.get("/queue")
 def queue(s: Nyaya = Depends(service)):
     return {"items": s.queue_list()}
 
 
 @app.post(f"{v1}/queue/advance-clock", dependencies=[Depends(analyst)])
+@app.post("/queue/advance-clock", dependencies=[Depends(analyst)])
 def advance_clock(hours: float = 48, s: Nyaya = Depends(service)):
     return s.advance_clock(hours)
 
 
 @app.post(f"{v1}/queue/{{explain_id}}", dependencies=[Depends(analyst)])
+@app.post("/queue/{{explain_id}}", dependencies=[Depends(analyst)])
 def queue_action(explain_id: str, body: QueueAction, s: Nyaya = Depends(service)):
     try:
         out = s.queue_action(explain_id, body.action, body.analyst)
@@ -165,11 +215,13 @@ def queue_action(explain_id: str, body: QueueAction, s: Nyaya = Depends(service)
 
 
 @app.get(f"{v1}/ledger/verify")
+@app.get("/ledger/verify")
 def ledger_verify(s: Nyaya = Depends(service)):
     return s.ledger.verify()
 
 
 @app.get(f"{v1}/ledger/tail")
+@app.get("/ledger/tail")
 def ledger_tail(n: int = 20, s: Nyaya = Depends(service)):
     recs = list(s.ledger.records())[-max(1, min(n, 200)):]
     return {"records": [{k: v for k, v in r.items() if k != "escrow_enc"} | {"escrow_encrypted": bool(r["escrow_enc"])}
@@ -177,21 +229,38 @@ def ledger_tail(n: int = 20, s: Nyaya = Depends(service)):
 
 
 @app.get(f"{v1}/system")
+@app.get("/system")
 def system(s: Nyaya = Depends(service)):
     return s.system()
 
 
 @app.get(f"{v1}/policy")
+@app.get("/policy")
 def policy(s: Nyaya = Depends(service)):
     return s.policy
 
 
+@app.get(f"{v1}/audit")
+@app.get("/audit")
+def audit(s: Nyaya = Depends(service)):
+    return {
+        "ledger": s.ledger.verify(),
+        "policy": s.policy,
+        "models": s.bundle.info(),
+        "feature_store": s.store.info(),
+        "engine_version": s.engine_version,
+        "status": "audited"
+    }
+
+
 @app.get(f"{v1}/scenarios")
+@app.get("/scenarios")
 def scenarios(s: Nyaya = Depends(service)):
     return {"scenarios": s.scenarios()}
 
 
 @app.post(f"{v1}/scenarios/{{n}}/run")
+@app.post("/scenarios/{{n}}/run")
 def run_scenario(n: int, s: Nyaya = Depends(service)):
     try:
         return s.run_scenario(n)
@@ -200,35 +269,92 @@ def run_scenario(n: int, s: Nyaya = Depends(service)):
 
 
 @app.post(f"{v1}/replay")
+@app.post("/replay")
 def replay(req: ReplayRequest = ReplayRequest(), s: Nyaya = Depends(service)):
     return s.replay(req.per_hour, req.seed, req.variant)
 
 
 def _sim(name: str, params: dict, s: Nyaya):
-    out = s.sim_hook(name, params)
+    try:
+        out = s.sim_hook(name, params)
+    except (RuntimeError, FileNotFoundError) as e:
+        raise HTTPException(503, f"sim.{name} not available yet: {e}")
     if out is None:
         raise HTTPException(503, f"sim.{name} not available yet (Kaustub's sim/ package or artifacts/sim/{name}.json)")
     return out
 
 
 @app.post(f"{v1}/simulate")
+@app.post("/simulate")
 def simulate(params: dict = {}, s: Nyaya = Depends(service)):
     return _sim("simulate", params, s)
 
 
 @app.get(f"{v1}/pareto")
-def pareto(s: Nyaya = Depends(service)):
-    return _sim("pareto", {}, s)
+@app.get("/pareto")
+def pareto(
+    alpha: Optional[float] = None,
+    beta: Optional[float] = None,
+    tau: Optional[float] = None,
+    stipend_cap: Optional[float] = None,
+    s: Nyaya = Depends(service),
+):
+    params: dict = {}
+    policy_overrides: dict = {}
+    if alpha is not None:
+        if not (0.0 <= alpha <= 1.0):
+            raise HTTPException(422, "alpha must be between 0.0 and 1.0")
+        policy_overrides["alpha"] = float(alpha)
+        params["alpha"] = float(alpha)
+    if beta is not None:
+        if beta <= 0:
+            raise HTTPException(422, "beta must be positive")
+        policy_overrides["beta"] = float(beta)
+        params["beta"] = float(beta)
+    if tau is not None:
+        if tau <= 0:
+            raise HTTPException(422, "tau must be positive")
+        policy_overrides["tau"] = float(tau)
+        params["tau"] = float(tau)
+    if stipend_cap is not None:
+        if stipend_cap < 0:
+            raise HTTPException(422, "stipend_cap must be non-negative")
+        policy_overrides["stipend_cap"] = float(stipend_cap)
+        params["stipend_cap"] = float(stipend_cap)
+    if policy_overrides:
+        params["policy"] = policy_overrides
+    return _sim("pareto", params, s)
 
 
 @app.get(f"{v1}/redteam")
+@app.get("/redteam")
 def redteam(s: Nyaya = Depends(service)):
     return _sim("redteam", {}, s)
 
 
 @app.get("/health")
+@app.get(f"{v1}/health")
 def health():
     return {"ok": svc is not None}
+
+
+@app.get("/healthz")
+@app.get(f"{v1}/healthz")
+def healthz():
+    if svc is None:
+        raise HTTPException(503, "Service initializing")
+    return {"ok": True, "status": "healthy"}
+
+
+@app.get("/version")
+@app.get(f"{v1}/version")
+def version(s: Nyaya = Depends(service)):
+    return {
+        "version": app.version,
+        "api_version": app.version,
+        "engine_version": s.engine_version,
+        "model_version": s.bundle.info()["model_version"]
+    }
 
 
 if DASHBOARD.is_dir():
