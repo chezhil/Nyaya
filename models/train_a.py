@@ -61,11 +61,15 @@ def main() -> None:
         dm = xgb.DMatrix(Xs, feature_names=MODEL_A_FEATURES)
         return booster.predict(dm, iteration_range=(0, booster.best_iteration + 1))
 
-    # Legacy baseline: same model with the disaster context zeroed, threshold at 1% FPR on validation.
-    Xv_leg = d["val"][0].copy()
+    # Legacy baseline: same model with the disaster context zeroed, threshold at 1% FPR on PEACETIME validation
+    # negatives (legitimate payments outside any disaster zone). A legacy engine is tuned on normal traffic; taking
+    # the quantile over all negatives let context-blind scores of displaced victims inflate it (0.34 on v2), which
+    # made the baseline catch almost no syndicate payments.
+    Xv = d["val"][0]
+    Xv_leg = Xv.copy()
     Xv_leg[DISASTER_CONTEXT] = 0
-    leg_neg = raw(Xv_leg)[d["val"][1] == 0]
-    legacy_threshold = float(np.quantile(leg_neg, 0.99))
+    peace_neg = (np.asarray(d["val"][1]) == 0) & (Xv["in_disaster_zone"].to_numpy() == 0)
+    legacy_threshold = float(np.quantile(raw(Xv_leg)[peace_neg], 0.99))
 
     iso = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0).fit(raw(d["iso"][0]), d["iso"][1])
 

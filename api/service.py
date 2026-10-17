@@ -60,6 +60,7 @@ class Nyaya:
                  accounts_path: Path | None = ACCOUNTS_PATH, start_workers: bool = True,
                  ledger_key: bytes | None = None):
         self.started = time.time()
+        self.artifacts = Path(artifacts)
         self.bundle = load_bundle(artifacts)
         self.decide, self.counterfactual, self.engine_version = load_engine()
         self.policy = json.loads(POLICY_PATH.read_text())
@@ -314,7 +315,7 @@ class Nyaya:
         takes minutes); live only when asked (`{"live": true}`) or when nothing is saved yet."""
         params = dict(params or {})
         live = bool(params.pop("live", False))
-        cached = Path(os.environ.get("NYAYA_ARTIFACTS", ARTIFACTS)) / "sim" / f"{name}.json"
+        cached = self.artifacts / "sim" / f"{name}.json"
         if cached.exists() and not live:
             return {**json.loads(cached.read_text()), "_source": f"artifacts/sim/{cached.name}"}
         try:
