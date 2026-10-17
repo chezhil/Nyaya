@@ -42,7 +42,8 @@ What did **not** go our way, reported as measured:
   is claimed.
 - **Zone rule** (`zone_hold_needs_mule`): it is what keeps victims off ₹0, and it costs about ₹1.76 lakh more
   account-takeover leakage on the independent file (model card, "Decision policy").
-- **Granite** is slow here: a card takes 13–16 s on this 3-vCPU VM, so decisions never wait for it (see [Explanations](#explanations)).
+- **Granite** is slow and unreliable here: a card takes 17–21 s on this 3-vCPU VM and half of the demo cards fail the
+  number check, so decisions never wait for it and the template is always shown first (see [Explanations](#explanations)).
 
 Live service on the 3-vCPU VM (`docs/evidence/`): 2,000 `/evaluate` calls at concurrency 8 → 334.9 req/s, client p50
 20.5 ms / p95 46.3 ms; OpenSSL on CPACF: SHA-256 4.26 GB/s, AES-256-GCM 12.31 GB/s (16 KB blocks); SELinux
@@ -75,8 +76,9 @@ Granite 4.0 350M (llama.cpp, in its own container) rewrites a template card from
 (`explain/masker.py`); identifiers never reach the prompt, outputs are checked against the facts, and the template is
 served whenever Granite is busy, slow or rejected. The card's `source` field says which one you are reading.
 
-Measured on the VM (17 Oct, scenario 2 facts, 367-token prompt, ~40 tokens out): model load ≈ 1 s, then 14.8–15.7 s
-per card on 2 threads and 13.4–14.2 s on 3. So `/evaluate` returns the decision and the template card immediately;
+Measured on the VM (17 Oct): model load ≈ 1 s, then 17.5–20.5 s per card on 2 threads with the current
+three-example prompt (13.4–15.7 s with the earlier two-example prompt). On the 6 demo scenarios Granite's card
+passed the check for 1, 3 and 6 and was rejected (template shown) for 2, 4 and 5, each for a wrong amount. So `/evaluate` returns the decision and the template card immediately;
 `GET /api/v1/explain/{id}` asks Granite with a 30 s budget (`NYAYA_GRANITE_TIMEOUT` in `deploy/pod.sh`), and the
 dashboard shows Granite's card next to the template. One generation runs at a time; concurrent requests get the template.
 

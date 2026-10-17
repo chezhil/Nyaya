@@ -116,3 +116,17 @@ def test_notice_fixture_is_english_only():
     assert "₹3,000" in n["en"] and "₹22,000" in n["en"]
     if n["source"] == "fixture":
         assert n["ta"] is None and n["hi"] is None
+
+
+def test_few_shot_examples_pass_their_own_check():
+    from explain.card import FEW_SHOT
+    assert {f["decision"] for f, _ in FEW_SHOT} == {"RELEASE", "REVIEW", "HOLD"}
+    for facts, text in FEW_SHOT:
+        assert check_output(text, facts) == (True, "ok"), text
+
+
+def test_review_card_saying_released_in_full_is_rejected():
+    facts = {"decision": "REVIEW", "amount": 25000, "release_now": 3000, "escrow": 22000, "escrow_hours": 48,
+             "severity_tier": 5, "hour": 14, "p_fraud": 0.92, "p_mule": 0.01, "clause_id": "CLAUSE-02"}
+    ok, why = check_output("The ₹25,000 stipend was reviewed. It was released in full (policy CLAUSE-02).", facts)
+    assert not ok and why == "contradicts decision"
