@@ -1,0 +1,5 @@
+# Added on top of IBM's LinuxONE Jupyter image (which already has xgboost, scikit-learn, torch, pandas,
+# networkx, rank-bm25, llama_cpp). `cryptography` does not build on this image; pycryptodome does.
+fastapi
+uvicorn
+pycryptodome

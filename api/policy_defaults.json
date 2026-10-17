@@ -1,0 +1,17 @@
+{
+  "alpha": 0.6,
+  "beta": 300,
+  "tau": 5000,
+  "theta_mule": 0.8,
+  "stipend_cap": 3000,
+  "escrow_hours": 48,
+  "urgency_by_category": {
+    "pharmacy": 1.5, "clinic": 1.5, "grocery": 1.3, "fuel": 1.2, "telecom": 1.1, "p2p": 1.0,
+    "donation": 1.0, "utilities": 1.0, "travel": 0.8, "electronics": 0.6, "jewellery": 0.5, "cash_out": 0.8
+  },
+  "sources": {
+    "beta": "PENDING (Aaditya): one day of the official MGNREGA wage for Tamil Nadu, 2026-27. Until cited: bank-set policy value, shown with a sensitivity sweep.",
+    "stipend_cap": "PENDING (Aaditya): official disaster-relief norm (MHA SDRF/NDRF immediate relief or state flood-relief cash). Until cited: bank-set policy value.",
+    "alpha, tau, theta_mule, urgency_by_category": "PENDING (Kaustub): tuned in the sensitivity analysis (notebook 04)."
+  }
+}

@@ -23,7 +23,7 @@ Files are gzip CSV (`pandas.read_csv("nyaya_v1.csv.gz")`). The IBM image has no 
 | `in_disaster_zone` | 0/1 | payment located in the declared disaster zone during the event |
 | `severity_tier` | int 0–5 | zone severity at that hour (0 outside a zone) |
 | `device_id`, `subnet` | str | sender device used / sender network (`/24`) |
-| `population` | str | **label, never a feature**: `normal` `ato` `displaced` `syndicate` `syndicate_forward` `ngo_payout` |
+| `population` | str | **label, never a feature**: `normal` `ato` `displaced` `syndicate` `syndicate_forward` `ngo_payout` `collector_donation` `collector_payout` |
 | `variant` | str | `base` `smurf` `device_spoof` `slow_drip` (red-team syndicate behaviour) |
 | `is_fraud` | 0/1 | **label**: `ato`, `syndicate`, `syndicate_forward` |
 | `is_mule_recipient` | 0/1 | **label**: recipient is a mule or cash-out account |
@@ -33,19 +33,26 @@ Files are gzip CSV (`pandas.read_csv("nyaya_v1.csv.gz")`). The IBM image has no 
 `syndicate_forward` rows are mules passing money on to cash-out accounts. Keep them in the stream (they drive
 `forward_within_10m_ratio`); the 10k evaluation suite counts `syndicate` rows as the syndicate payments.
 
-### Populations
-- **normal** — residents and others paying merchants (78%), family (18%), and NGO donations during the disaster (4%). Daytime-heavy, known device, small geo shift. Zone residents get `in_disaster_zone = 1` during the event.
-- **ato** (1.5% of normal) — account takeover: drains 90–100% of the balance to a fresh account, 86% new device, ~400 km shift, night-weighted, 15% spoof the disaster zone during the event.
-- **displaced** — victims paying from camps: essentials (grocery, pharmacy, fuel, clinic up to ₹40,000, telecom, family), 55% borrowed phones, ~60 km shift, night-weighted, crowded relief-camp merchants. **Benign but anomalous — the case legacy engines freeze.**
-- **syndicate** — rings of 5 mules + 2 cash-out accounts. Compromised zone accounts are drained to the mules in a 10-minute burst (20–30 per mule), with the zone spoofed. Mules share 2 phones and one subnet, are 1–45 days old, and forward each payment within 1–8 min.
-- **ngo_payout** — NGOs collect donations and pay suppliers every 30 min: a benign pass-through account (hard negative for Model B).
+### Populations (v2)
+- **normal** — residents and others paying merchants (78%), family (18%), and NGO donations during the disaster (4%). Daytime-heavy, 4% new device, small geo shift. About 3% move almost their whole balance (rent, family, cash withdrawal). Zone residents get `in_disaster_zone = 1` during the event.
+- **ato** (1.5% of normal) — account takeover: 65% drain 90–100% of the balance, the rest take 30–80%; 40% buy resellable goods at merchants (electronics, jewellery, telecom, fuel, travel), 60% move money to a fresh account; 70% new device; 40% local (SIM swap, someone nearby), the rest ~400 km away; night-weighted; 15% spoof the disaster zone.
+- **displaced** — victims paying from camps: essentials (grocery, pharmacy, fuel, clinic up to ₹40,000, telecom, cash withdrawal, family), 70% borrowed phones, ~120 km shift with a long tail, strongly night-weighted, crowded relief-camp merchants, and 20% spend (almost) everything left. **Benign but anomalous — the case legacy engines freeze.**
+- **syndicate** — rings of 5 mules + 2 cash-out accounts. Compromised zone accounts are drained (75% take 85–100%, the rest 50–85%) to the mules in a 10–30 min burst (6–30 per mule), with the zone spoofed. 55% of mules are fresh (1–45 days, ring subnet); 45% are recruited real customers (200–3,000 days, own home network, normal balance). 60% of mules use one of 2 ring phones. 70% forward each payment within 1–8 min, 30% within 8–25 min.
+- **ngo_payout** — 30 NGOs collect donations and pay suppliers every 20 min: benign pass-through accounts.
+- **collector_donation / collector_payout** — community volunteers (often new accounts) collect 5–20 UPI donations in 10–30 min and pass 30–60% of their balance to displaced families or camp merchants within minutes. **Legitimate fan-in plus fast forwarding: Model B's hardest negatives.**
+
+### Benign sharing in the accounts (v2)
+Real fraud signals have to see past ordinary sharing: people draw their network from household/carrier pools (≈3 other accounts per subnet), shops share market networks, 20% of displaced accounts sit on relief-camp Wi-Fi, 8% of people share a family phone, 12% of low-income accounts were opened on a bank-mitra agent's phone (~10 accounts per device), and 6–12% of accounts are newly opened (1–60 days, near-empty balance).
+
+### Why v2 exists
+v1 made each fraud signal a perfect separator: every legitimate account had its own subnet (`shared_subnet_count` alone gave AP 1.0), mules were always young on shared phones, and only fraudsters ever emptied an account. Models scored PR-AUC ≈ 1.0, the legacy baseline froze almost no victims, and conformal never flagged uncertainty. v2 adds the realistic overlaps above. No label is used to compute any feature in either version.
 
 ### Red-team variants (`--variant`)
 | Variant | Change | Expected to weaken |
 |---|---|---|
 | `smurf` | 3× more mules per ring, ⅓ the payments each | `fan_in_15m`, `unique_senders_15m` |
-| `device_spoof` | every mule has its own phone and subnet; senders show a known device 90% of the time | `device_reuse_density`, `shared_subnet_count`, `new_device` |
-| `slow_drip` | forwarding delayed 12–40 min | `forward_within_10m_ratio` |
+| `device_spoof` | every mule has its own phone and a fresh subnet; senders show a known device 90% of the time | `device_reuse_density`, `shared_subnet_count`, `new_device` |
+| `slow_drip` | all forwarding delayed 12–40 min | `forward_within_10m_ratio` |
 
 ## Accounts — `accounts_<tag>.csv.gz`
 

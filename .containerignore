@@ -1,0 +1,9 @@
+.git
+.venv
+artifacts
+var
+data/raw
+**/__pycache__
+*.gguf
+*.pem
+.env
