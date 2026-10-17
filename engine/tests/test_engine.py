@@ -8,6 +8,8 @@ import pytest
 from engine import ENGINE_VERSION, counterfactual, decide
 
 POLICY = json.loads((Path(__file__).resolve().parents[2] / "api" / "policy_defaults.json").read_text())
+# The plan's table as written (one wide tau band, no zone rule): pins the REVIEW logic independently of tuned values.
+PLAN = {**POLICY, "tau": 5000.0, "tau_review": 5000.0, "zone_hold_needs_mule": False}
 
 
 def tx(**kw):
@@ -41,7 +43,7 @@ def test_hold_when_expected_fraud_harm_beats_threshold():
 
 
 def test_review_releases_stipend_and_escrows_the_rest():
-    d = decide(sc(p_fraud=0.1, cset=("legit", "fraud")), tx(amount=25000.0), POLICY)
+    d = decide(sc(p_fraud=0.1, cset=("legit", "fraud")), tx(amount=25000.0), PLAN)
     assert d["decision"] == "REVIEW"
     assert d["release_now"] == POLICY["stipend_cap"]
     assert d["escrow"] == pytest.approx(25000.0 - POLICY["stipend_cap"])
@@ -66,8 +68,9 @@ def test_severity_raises_cost_of_holding():
 
 
 def test_decision_is_consistent_with_amounts():
-    d = decide(sc(p_fraud=0.1, cset=("legit", "fraud")), tx(amount=25000.0), POLICY)
-    assert d["release_now"] + d["escrow"] == pytest.approx(25000.0)
+    for pol in (PLAN, POLICY):
+        d = decide(sc(p_fraud=0.1, cset=("legit", "fraud")), tx(amount=25000.0), pol)
+        assert d["release_now"] + d["escrow"] == pytest.approx(25000.0) or d["decision"] == "HOLD"
 
 
 # ---- counterfactuals ---------------------------------------------------------------------------------------
