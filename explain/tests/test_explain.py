@@ -86,6 +86,31 @@ def test_bm25_picks_mule_clause_for_ring():
     assert c["id"] == "6.2"
 
 
+def test_clause_follows_decision_basis_not_reason_labels():
+    idx = PolicyIndex(FIXTURE_PATH)
+    peace = {**TX, "in_disaster_zone": 0, "severity_tier": 0}
+    labels = ["mule-ring centrality", "payee forwards money within 10 min", "new or borrowed phone"]
+    assert idx.for_decision("RELEASE", TX, labels, mule_flag=False)["id"] == "3.1"
+    assert idx.for_decision("HOLD", peace, labels, mule_flag=False)["id"] == "6.1"  # harm HOLD, not the mule override
+    none = idx.for_decision("RELEASE", peace, labels, mule_flag=False)  # no clause covers a routine release
+    assert none["id"] is None and none["basis"] == "routine"
+
+
+def test_demo_scenarios_never_cite_a_clause_tagged_for_another_decision():
+    from explain.policy import POLICY_PATH, _TAG
+
+    if not POLICY_PATH.exists():
+        pytest.skip("docs/relief_policy.md missing")
+    idx = PolicyIndex(POLICY_PATH)
+    scenarios = json.loads((POLICY_PATH.parent.parent / "data" / "scenarios" / "demo_scenarios.json").read_text())
+    for s in scenarios["scenarios"]:
+        for decision in ("RELEASE", "REVIEW", "HOLD"):
+            for mule in (False, True):
+                c = idx.for_decision(decision, s["tx"], [], mule)
+                tags = set(_TAG.findall(c["title"] or ""))
+                assert not tags or decision in tags, (s["n"], decision, c["id"])
+
+
 def test_notice_fixture_is_english_only():
     n = Notices().render("REVIEW", 25000, 3000, 22000, 48)
     assert "₹3,000" in n["en"] and "₹22,000" in n["en"]
