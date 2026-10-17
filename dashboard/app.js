@@ -456,8 +456,10 @@ async function fetchGraniteExplanation(result) {
   const g = explainData.granite || {};
   if (graniteElem) {
     const tpl = explainData.card_template || '';
+    // The template is built from the facts and is authoritative. Granite's rewrite only has its numbers checked
+    // (explain/card.py check_output), not its wording, so it is shown second and marked as a draft.
     graniteElem.textContent = g.source === 'granite'
-      ? `[Granite 350M, ${g.ms ? Math.round(g.ms / 100) / 10 + ' s' : '?'}, checked against the facts] ${g.card}\n\n[template] ${tpl}`
+      ? `[template, from the decision facts] ${tpl}\n\n[Granite 350M draft, ${g.ms ? Math.round(g.ms / 100) / 10 + ' s' : '?'}; numbers checked, wording NOT verified] ${g.card}`
       : `[template; Granite ${g.reason || 'not used'}] ${g.card || tpl || DASH}`;
   }
   if (promptElem) promptElem.textContent = JSON.stringify(explainData.masked_facts || {}, null, 1);
