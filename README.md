@@ -80,6 +80,10 @@ per card on 2 threads and 13.4–14.2 s on 3. So `/evaluate` returns the decisio
 `GET /api/v1/explain/{id}` asks Granite with a 30 s budget (`NYAYA_GRANITE_TIMEOUT` in `deploy/pod.sh`), and the
 dashboard shows Granite's card next to the template. One generation runs at a time; concurrent requests get the template.
 
+Granite's wording is not reliable: on 17 Oct, for scenario 2 (REVIEW, ₹3,000 now + ₹22,000 escrow) it wrote that the
+payment "was released in full". `check_output` only verifies numbers, so the dashboard shows the template first and
+Granite's text below it as an unverified draft.
+
 ## Repository
 
 | Folder | What | Owner |
