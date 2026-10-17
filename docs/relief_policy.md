@@ -27,3 +27,9 @@ Any generative foundation model (IBM Granite 350M running on LinuxONE) generatin
 
 ### CLAUSE-08 Tamper-Evident Audit Ledger
 Every automated decision, micro-stipend allocation, escrow lock, and human analyst override is cryptographically linked in an immutable append-only hash chain. Each record calculates `hash = SHA-256(record || prev_hash)` computed through OpenSSL, which uses the IBM Z Central Processor Assist for Cryptographic Functions (CPACF). All escrow records are encrypted at rest with AES-256-GCM, and verification is continuously auditable via `/api/v1/ledger/verify`.
+
+### CLAUSE-09 Routine Payments Outside Declared Disaster Zones (RELEASE)
+Outside a declared disaster zone, a payment is released in full when its expected fraud loss (probability of fraud times the amount) does not exceed the expected harm of blocking a legitimate payer by the HOLD margin `tau`, the recipient is not flagged as a mule-ring account, and the fraud model is certain enough. No stipend or escrow applies; the decision, its reasons and its ledger record are kept for audit like any other.
+
+### CLAUSE-10 Clear Fraud and Account Takeover Block (HOLD)
+When the expected fraud loss exceeds the expected harm of blocking a legitimate payer by at least the margin `tau`, as in a typical account takeover that drains a balance to a new payee, the payment is held in full: funds stay in the remitter's account, the case enters the analyst queue, and the account holder may appeal. Inside a declared disaster zone this harm-based block applies only together with the mule-ring override (CLAUSE-04); otherwise the payment becomes a REVIEW with the survival stipend (CLAUSE-02). A HOLD is never released automatically.

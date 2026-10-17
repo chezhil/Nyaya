@@ -59,3 +59,15 @@
 8.1. Every transactional evaluation, micro-stipend authorization, escrow isolation, and analyst override is recorded in an immutable append-only hash chain.  
 8.2. Each block calculates `hash = SHA-256(record || prev_hash)` computed through OpenSSL, which uses the IBM Z Central Processor Assist for Cryptographic Functions (CPACF).  
 8.3. Escrow allocation records containing sensitive beneficiary tokens are encrypted at rest with AES-256-GCM. Any modification or truncation of ledger history causes immediate hash verification failure via `/api/v1/ledger/verify`.  
+
+---
+
+### CLAUSE-09: Routine Payments Outside Declared Disaster Zones (RELEASE State)
+9.1. Outside a declared disaster zone, a payment is released in full when its expected fraud loss does not exceed the expected harm of blocking a legitimate payer by the HOLD margin `tau`, the recipient carries no mule-ring flag, and the fraud model is certain enough.
+9.2. No stipend or escrow applies; the decision and its reasons are recorded in the audit ledger.
+
+---
+
+### CLAUSE-10: Clear Fraud and Account Takeover Block (HOLD State)
+10.1. When the expected fraud loss exceeds the expected harm of blocking by at least `tau` (for example, an account takeover draining a balance to a new payee), the payment is held in full, funds remain in the remitter's account, and the case enters the analyst queue with a one-tap appeal.
+10.2. Inside a declared disaster zone this harm-based block applies only together with the mule-ring override (CLAUSE-04); otherwise the payment becomes a REVIEW with the survival stipend (CLAUSE-02). A HOLD is never released automatically.
