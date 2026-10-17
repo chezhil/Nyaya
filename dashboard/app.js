@@ -447,14 +447,19 @@ async function fetchGraniteExplanation(result) {
     if (promptElem) promptElem.textContent = 'Connect to the live API to see the masked facts sent to Granite.';
     return;
   }
-  if (graniteElem) graniteElem.textContent = 'Asking Granite on LinuxONE…';
-  const explainData = await apiFetch(`/explain/${encodeURIComponent(result.explain_id)}`, { timeout: 20000 });
+  if (graniteElem) graniteElem.textContent = 'Asking Granite on LinuxONE (about 15 s per card on this VM)…';
+  const explainData = await apiFetch(`/explain/${encodeURIComponent(result.explain_id)}`, { timeout: 45000 });
   if (!explainData) {
     if (graniteElem) graniteElem.textContent = `[explain unavailable] ${result.card_template || ''}`;
     return;
   }
   const g = explainData.granite || {};
-  if (graniteElem) graniteElem.textContent = `[${g.source || '?'}${g.reason ? ': ' + g.reason : ''}] ${g.card || explainData.card_template || DASH}`;
+  if (graniteElem) {
+    const tpl = explainData.card_template || '';
+    graniteElem.textContent = g.source === 'granite'
+      ? `[Granite 350M, ${g.ms ? Math.round(g.ms / 100) / 10 + ' s' : '?'}, checked against the facts] ${g.card}\n\n[template] ${tpl}`
+      : `[template; Granite ${g.reason || 'not used'}] ${g.card || tpl || DASH}`;
+  }
   if (promptElem) promptElem.textContent = JSON.stringify(explainData.masked_facts || {}, null, 1);
 }
 

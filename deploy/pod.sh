@@ -35,6 +35,7 @@ podman pod create --name nyaya --userns keep-id:uid=1000,gid=1000 -p 8000:8000
 COMMON=(--pod nyaya --restart unless-stopped -w /opt/nyaya
   -v "$REPO:/opt/nyaya:ro,z" -v "$DATA:/data:ro,z" -v "$DEPS:/opt/pydeps:ro,z"
   -e PYTHONPATH=/opt/nyaya:/opt/pydeps -e PYTHONUNBUFFERED=1 -e PYTHONDONTWRITEBYTECODE=1
+  -e NYAYA_GRANITE_TIMEOUT=30   # Granite 350M takes ~14-16 s per card on this 3-vCPU VM; only /explain waits for it
   -e NYAYA_ARTIFACTS=/opt/nyaya/artifacts -e NYAYA_ACCOUNTS=/data/accounts_v2.csv.gz)
 
 podman run -d --name nyaya-explainer "${COMMON[@]}" --memory 1500m \

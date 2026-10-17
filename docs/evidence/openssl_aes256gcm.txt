@@ -1,0 +1,15 @@
+You have chosen to measure elapsed time instead of user CPU time.
+Doing AES-256-GCM ops for 3s on 16 size blocks: 14298203 AES-256-GCM ops in 3.00s
+Doing AES-256-GCM ops for 3s on 64 size blocks: 14092041 AES-256-GCM ops in 3.00s
+Doing AES-256-GCM ops for 3s on 256 size blocks: 13416266 AES-256-GCM ops in 3.00s
+Doing AES-256-GCM ops for 3s on 1024 size blocks: 11591806 AES-256-GCM ops in 3.00s
+Doing AES-256-GCM ops for 3s on 8192 size blocks: 4052217 AES-256-GCM ops in 3.00s
+Doing AES-256-GCM ops for 3s on 16384 size blocks: 2254710 AES-256-GCM ops in 3.00s
+version: 3.5.8
+built on: Mon Sep 21 00:00:00 2026 UTC
+options: bn(64,64)
+compiler: gcc -fPIC -pthread -m64 -Wa,--noexecstack -Wall -O3 -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -march=z14 -mtune=z15 -fasynchronous-unwind-tables -fstack-clash-protection -Wa,--noexecstack -Wa,--generate-missing-build-notes=yes -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -DOPENSSL_USE_NODELETE -DB_ENDIAN -DOPENSSL_PIC -DOPENSSL_BUILDING_OPENSSL -DZLIB -DNDEBUG -D_GNU_SOURCE -DPURIFY -DDEVRANDOM="\\"/dev/urandom\\"" -DOPENSSL_PEDANTIC_ZEROIZATION -DREDHAT_FIPS_VENDOR="\\"Red Hat Enterprise Linux OpenSSL FIPS Provider\\"" -DREDHAT_FIPS_VERSION="\\"3.5.8-2f0e70545faaf7a5\\"" -DSYSTEM_CIPHERS_FILE="/etc/crypto-policies/back-ends/opensslcnf.config"
+CPUINFO: OPENSSL_s390xcap=stfle:0xfbcbfffbfeffff7c:0x7fcef0000000000:0x77003b9804a00000:0x0:kimd:0xf0000000fc000000:0x4000000000000001:klmd:0xf0000000fc000000:0x1:km:0xf070383800002828:0x282800000001:kmc:0xf070383800000000:0x1000000000000001:kmac:0xf070383800000000:0xf0f1:kmctr:0xf070383800000000:0x1:kmo:0xf070383800000000:0x1:kmf:0xf070383800000000:0x1:prno:0x9000000000000000:0xa001:kma:0x8000383800000000:0x1:pcc:0xf070383800002828:0xe0c0c00000000001:kdsa:0xf070700088888800:0x1
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   8192 bytes  16384 bytes
+AES-256-GCM      76257.08k   300630.21k  1144854.70k  3956669.78k 11065253.89k 12313722.88k

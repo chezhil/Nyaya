@@ -37,8 +37,8 @@
 
 ### CLAUSE-05: Grounded Policy Parameters (Beta & Stipend Cap)
 5.1. Rather than utilizing arbitrary mathematical constants, institutional risk parameters are anchored to published Indian economic and disaster management benchmarks:
-   - **Wrongful Freeze Harm Base (`beta = ₹345`):** Grounded in one day of the official notified rural minimum daily wage for Tamil Nadu (₹345/day under the 2026–27 VB-G RAM G / MGNREGS notification; revised from ₹336/day in 2025–26, published by the Ministry of Rural Development, Government of India: [https://nrega.nic.in](https://nrega.nic.in)). This quantifies the economic injury inflicted on a vulnerable citizen when legitimate funds are locked for 24 hours.
-   - **Survival Stipend Cap (`Cap_survival = ₹3,000`):** Grounded in 50% of the Tamil Nadu State Disaster Response Fund (SDRF) Cyclone Michaung emergency flood-relief cash grant (₹6,000 per affected household) for immediate 48-hour household survival, notified by the Revenue and Disaster Management Department, Government of Tamil Nadu: [https://tnsdma.tn.gov.in](https://tnsdma.tn.gov.in) (G.O. Ms. No. 587).
+   - **Wrongful Freeze Harm Base (`beta = ₹345`):** Grounded in one day of the official notified rural minimum daily wage for Tamil Nadu (₹345/day for unskilled manual work in Tamil Nadu, notified by the Ministry of Rural Development on 30 June 2026 under Section 10 of the VB-G RAM G Act, 2025, effective 1 July 2026; reported by [SCC Online](https://www.scconline.com/blog/post/2026/07/06/state-wise-wage-rates-revised-under-vb-g-ram-g-act/)). This quantifies the economic injury inflicted on a vulnerable citizen when legitimate funds are locked for 24 hours.
+   - **Survival Stipend Cap (`Cap_survival = ₹3,000`):** Grounded in 50% of the Tamil Nadu Cyclone Michaung flood-relief cash assistance of ₹6,000 per family (Government Order of the Revenue and Disaster Management Department, December 2023, paid in cash through ration shops; reported by [DT Next](https://www.dtnext.in/news/tamilnadu/tn-issues-go-to-disburse-rs-6000-flood-relief-754265) and [Deccan Herald](https://www.deccanherald.com/india/tamil-nadu/tamil-nadu-cm-stalin-launches-flood-relief-of-rs-6000-to-families-affected-by-cyclone-michaung-2814559)). Half of it is meant to cover the first 48 hours.
 
 ---
 
@@ -59,3 +59,15 @@
 8.1. Every transactional evaluation, micro-stipend authorization, escrow isolation, and analyst override is recorded in an immutable append-only hash chain.  
 8.2. Each block calculates `hash = SHA-256(record || prev_hash)` computed through OpenSSL, which uses the IBM Z Central Processor Assist for Cryptographic Functions (CPACF).  
 8.3. Escrow allocation records containing sensitive beneficiary tokens are encrypted at rest with AES-256-GCM. Any modification or truncation of ledger history causes immediate hash verification failure via `/api/v1/ledger/verify`.  
+
+---
+
+### CLAUSE-09: Routine Payments Outside Declared Disaster Zones (RELEASE State)
+9.1. Outside a declared disaster zone, a payment is released in full when its expected fraud loss does not exceed the expected harm of blocking a legitimate payer by the HOLD margin `tau`, the recipient carries no mule-ring flag, and the fraud model is certain enough.
+9.2. No stipend or escrow applies; the decision and its reasons are recorded in the audit ledger.
+
+---
+
+### CLAUSE-10: Clear Fraud and Account Takeover Block (HOLD State)
+10.1. When the expected fraud loss exceeds the expected harm of blocking by at least `tau` (for example, an account takeover draining a balance to a new payee), the payment is held in full, funds remain in the remitter's account, and the case enters the analyst queue with a one-tap appeal.
+10.2. Inside a declared disaster zone this harm-based block applies only together with the mule-ring override (CLAUSE-04); otherwise the payment becomes a REVIEW with the survival stipend (CLAUSE-02). A HOLD is never released automatically.

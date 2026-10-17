@@ -1,0 +1,5 @@
+ID            NAME                CPU %       MEM USAGE / LIMIT  MEM %       NET IO          BLOCK IO    PIDS        CPU TIME       AVG CPU %
+734da0ce0405  notebook            1.21%       794.7MB / 7.868GB  10.10%      0B / 0B         0B / 0B     2           14m51.177595s  1.21%
+6bad1acf3317  e7bdc0e7b41e-infra  0.00%       286.7kB / 7.868GB  0.00%       318B / 1.242kB  0B / 0B     1           10.031ms       0.00%
+afa29be9ec41  nyaya-explainer     0.13%       35.3MB / 1.573GB   2.24%       318B / 1.242kB  0B / 0B     2           11.21738s      0.13%
+0c0a734031e4  nyaya-api           0.27%       292.5MB / 2.147GB  13.62%      318B / 1.242kB  0B / 0B     30          22.961646s     0.27%

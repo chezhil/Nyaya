@@ -10,8 +10,8 @@
 | **Decadal Displacements (2015–2024)** | **32.3 million** cumulative internal displacements in India over 10 years, ranking **3rd highest in the world**. | IDMC *GRID 2025* |
 | **Vulnerable Account Infrastructure** | **59.09 crore** Pradhan Mantri Jan Dhan Yojana (PMJDY) accounts as of August 2026. Approximately **78%** are located in rural and semi-urban locations—the exact accounts receiving emergency Direct Benefit Transfers (DBT), relief grants, and wage credits. | Ministry of Finance / Press Information Bureau (PIB) |
 | **Unmeasured Harm Thesis** | *"No commercial bank or public agency measures how many innocent disaster victims have their accounts mistakenly frozen at midnight during floods. NYAYA makes this hidden humanitarian harm measurable and preventable."* | NYAYA Core Thesis |
-| **Grounded Parameter: $\beta$** | **₹345 / day**: Set to 1 day of the official notified rural daily minimum wage for Tamil Nadu (under the 2026–27 VB-G RAM G / MGNREGS notification; revised from ₹336/day in 2025–26). Represents the economic injury of freezing a family's daily bread. | Ministry of Rural Development, Govt. of India ([https://nrega.nic.in](https://nrega.nic.in)) |
-| **Grounded Parameter: Stipend Cap** | **₹3,000**: Grounded in 50% of the Tamil Nadu State Disaster Response Fund (SDRF) Cyclone Michaung emergency flood-relief cash grant (₹6,000 per affected household) for immediate 48-hour household survival. | Government of Tamil Nadu (Disaster Management, [https://tnsdma.tn.gov.in](https://tnsdma.tn.gov.in) G.O. Ms. No. 587) |
+| **Grounded Parameter: $\beta$** | **₹345 / day**: Set to 1 day of the official notified rural daily minimum wage for Tamil Nadu (Ministry of Rural Development notification of 30 June 2026 under the VB-G RAM G Act, 2025, effective 1 July 2026). Represents the economic injury of freezing a family's daily bread. | Ministry of Rural Development, reported by [SCC Online](https://www.scconline.com/blog/post/2026/07/06/state-wise-wage-rates-revised-under-vb-g-ram-g-act/) |
+| **Grounded Parameter: Stipend Cap** | **₹3,000**: 50% of the Tamil Nadu Cyclone Michaung flood-relief cash assistance of ₹6,000 per family (December 2023), meant to cover the first 48 hours. | Revenue and Disaster Management Department G.O., Dec 2023, reported by [DT Next](https://www.dtnext.in/news/tamilnadu/tn-issues-go-to-disburse-rs-6000-flood-relief-754265) |
 
 ---
 
@@ -22,8 +22,8 @@
 
 ### Q2: Who decides $\alpha, \beta$, and the Survival Stipend Cap? How is harm calculated?
 **Answer:** These are institutional policy parameters set by bank risk and compliance committees:
-* $\beta = ₹345/\text{day}$ is grounded in the official Tamil Nadu rural minimum daily wage published by the Ministry of Rural Development ([https://nrega.nic.in](https://nrega.nic.in)).
-* $\text{Cap}_{\text{survival}} = ₹3,000$ is grounded in 50% of the Tamil Nadu SDRF Cyclone Michaung emergency flood relief cash grant ([https://tnsdma.tn.gov.in](https://tnsdma.tn.gov.in)).
+* $\beta = ₹345/\text{day}$ is one day of the Tamil Nadu wage for unskilled rural work, notified by the Ministry of Rural Development on 30 June 2026 under the VB-G RAM G Act, 2025.
+* $\text{Cap}_{\text{survival}} = ₹3,000$ is 50% of the ₹6,000 per family Cyclone Michaung flood-relief cash assistance (Tamil Nadu, December 2023).
 * **Harm Calculation:** The expected societal harm differential is evaluated strictly in Indian Rupees (₹) as:
   $$\Delta H = H_{\text{fraud}} - H_{\text{hold}}$$
   where:

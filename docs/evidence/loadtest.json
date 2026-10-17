@@ -1,0 +1,19 @@
+{
+  "requests": 2000,
+  "concurrency": 8,
+  "status_codes": {
+    "200": 2000
+  },
+  "throughput_rps": 334.9,
+  "client_ms": {
+    "p50": 20.54,
+    "p95": 46.26,
+    "p99": 81.3
+  },
+  "server_latency_ms": {
+    "n": 2000,
+    "p50": 11.677,
+    "p95": 32.945,
+    "p99": 61.359
+  }
+}
