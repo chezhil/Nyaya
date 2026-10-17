@@ -102,7 +102,7 @@ def check_output(text: str, facts: dict) -> tuple[bool, str]:
     words = {"RELEASE": ("released", "paid"), "REVIEW": ("held", "escrow", "stipend"), "HOLD": ("held", "blocked")}
     if not any(w in text.lower() for w in words[facts["decision"]]):
         return False, "decision not stated"
-    other = {"RELEASE": ("blocked",), "REVIEW": ("blocked", "paid in full", "released in full"),
+    other = {"RELEASE": ("blocked", "held", "escrow", "stipend"), "REVIEW": ("blocked", "paid in full", "released in full"),
              "HOLD": ("paid in full", "released in full")}
     if any(w in text.lower() for w in other[facts["decision"]]):
         return False, "contradicts decision"
