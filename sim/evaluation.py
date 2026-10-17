@@ -244,6 +244,47 @@ def _evaluate_suite(ctx, df: pd.DataFrame, policy: dict, naive_cap: float) -> di
     }
 
 
+def _legacy_diagnostics(df: pd.DataFrame, legacy_scores, threshold: float) -> dict:
+    """Is the legacy baseline's behaviour real or an artefact? Score range per population against its threshold."""
+    s = np.asarray(legacy_scores, float)
+    out = {"threshold": float(threshold), "score_min": float(s.min()), "score_max": float(s.max()),
+           "threshold_above_max": bool(threshold > s.max()), "by_population": {}}
+    for pop in sorted(df["population"].unique()):
+        v = s[df["population"].to_numpy() == pop]
+        out["by_population"][pop] = {
+            "n": int(v.size), "flag_rate": float((v >= threshold).mean()),
+            "q50": float(np.quantile(v, .5)), "q90": float(np.quantile(v, .9)), "q99": float(np.quantile(v, .99)),
+            "max": float(v.max()), "share_saturated_ge_0.999": float((v >= 0.999).mean())}
+    return out
+
+
+def _zone_rule_audit(ctx, params: dict, policy: dict) -> dict:
+    """Account takeovers in the whole independent file, decided with the zone rule on and off. Takeovers that
+    spoof a disaster zone can reach only REVIEW (stipend released) when the rule is on: a policy cost, measured."""
+    tag = str(params.get("suite_tag", "eval"))
+    df = _read_payments(params, tag)
+    ato = df[df["population"] == "ato"].reset_index(drop=True)
+    if ato.empty:
+        return {"source": tag, "rows": 0}
+    scores = _score(ctx, ato)
+    spoofed = ato["in_disaster_zone"].to_numpy() == 1
+    amount = ato["amount"].to_numpy(float)
+    out = {"source": f"independent file {tag}, all population == 'ato' rows", "rows": int(len(ato)),
+           "spoofed_zone_rows": int(spoofed.sum()), "fraud_total_rupees": float(amount.sum())}
+    for rule in (False, True):
+        dec = _decisions(ctx, ato, scores, {**policy, "zone_hold_needs_mule": rule})
+        released = dec["release_now"].to_numpy(float)
+        d = dec["decision"].to_numpy()
+        out[f"zone_rule_{'on' if rule else 'off'}"] = {
+            "hold_rate": float((d == "HOLD").mean()), "review_rate": float((d == "REVIEW").mean()),
+            "release_rate": float((d == "RELEASE").mean()),
+            "leakage_rupees": float(released.sum()),
+            "spoofed_zone_hold_rate": float((d[spoofed] == "HOLD").mean()) if spoofed.any() else None,
+            "spoofed_zone_leakage_rupees": float(released[spoofed].sum()),
+        }
+    return out
+
+
 def simulate(ctx, params: dict) -> dict:
     """Run the fixed 10,000-row independent suite and all headline audits."""
     _require_real_bundle(ctx)
@@ -262,6 +303,9 @@ def simulate(ctx, params: dict) -> dict:
         },
         "metrics": evaluated["results"],
         "fairness": _fairness(df, evaluated["nyaya_decisions"]),
+        "legacy_diagnostics": _legacy_diagnostics(df, evaluated["scores"]["p_legacy_raw"],
+                                                  float(ctx.bundle.legacy_threshold)),
+        "ato_zone_rule_audit": _zone_rule_audit(ctx, params, policy),
         "model": ctx.bundle.info(),
     }
 
