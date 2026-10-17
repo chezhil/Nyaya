@@ -11,6 +11,11 @@
 
 S is the zone severity tier (0 outside a declared zone). A REVIEW whose amount already fits inside the stipend
 cap would escrow nothing, so it is a RELEASE.
+
+zone_hold_needs_mule (policy flag, default False = the plan's table as written): inside a declared disaster zone
+a harm-based HOLD becomes a REVIEW, so only the mule override can leave a payer with Rs 0. This is what makes the
+plan's headline "victims left with Rs 0: 0% unless mule-flagged" true by design; its cost is that unflagged fraud
+inside a zone leaks up to one stipend per payment, which the tuning run measures.
 """
 from __future__ import annotations
 
@@ -46,9 +51,12 @@ def decide(scores: dict, tx: dict, policy: dict) -> dict:
     cap = float(policy["stipend_cap"])
     uncertain = len(scores.get("conformal_set", ["legit"])) != 1  # {legit, fraud} or empty = unsure
 
-    if float(scores.get("p_mule", 0.0)) >= float(policy["theta_mule"]) or delta >= tau:
+    mule = float(scores.get("p_mule", 0.0)) >= float(policy["theta_mule"])
+    harm_hold = delta >= tau
+    softened = harm_hold and bool(policy.get("zone_hold_needs_mule", False)) and severity(tx) > 0
+    if mule or (harm_hold and not softened):
         decision, release_now = "HOLD", 0.0
-    elif (uncertain or delta > -tau_review) and amount > cap:
+    elif (softened or uncertain or delta > -tau_review) and amount > cap:
         decision, release_now = "REVIEW", cap
     else:
         decision, release_now = "RELEASE", amount

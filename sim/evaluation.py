@@ -27,7 +27,7 @@ def _data_dir(params: dict) -> Path:
 
 
 def _read_payments(params: dict, tag: str | None = None) -> pd.DataFrame:
-    tag = tag or str(params.get("tag", "v1"))
+    tag = tag or str(params.get("tag", "v2"))
     path = _data_dir(params) / f"nyaya_{tag}.csv.gz"
     if not path.exists():
         raise FileNotFoundError(f"evaluation data not found: {path}")
@@ -84,6 +84,23 @@ def _fixed_sample(df: pd.DataFrame, counts: dict[str, int], seed: int) -> pd.Dat
         chosen.append(rng.choice(positions, size=count, replace=False))
     order = rng.permutation(np.concatenate(chosen))
     return test.iloc[order].reset_index(drop=True)
+
+
+def _suite_frame(params: dict, counts: dict[str, int], seed: int) -> tuple[pd.DataFrame, str]:
+    """The evaluation suite. Preferred: an independent file generated with a different seed (`suite_tag`, default
+    suite_v2), so every row is held out from training, calibration and tuning. Fallback: Model A's test split."""
+    suite_tag = params.get("suite_tag", "suite_v2")
+    if suite_tag and (_data_dir(params) / f"nyaya_{suite_tag}.csv.gz").exists():
+        df = _read_payments(params, str(suite_tag))
+        rng = np.random.default_rng(seed)
+        chosen = []
+        for population, count in counts.items():
+            positions = np.flatnonzero(df["population"].to_numpy() == population)
+            if len(positions) < count:
+                raise ValueError(f"{suite_tag} has {len(positions)} {population!r} rows; {count} are required")
+            chosen.append(rng.choice(positions, size=count, replace=False))
+        return df.iloc[rng.permutation(np.concatenate(chosen))].reset_index(drop=True), f"independent file {suite_tag}"
+    return _fixed_sample(_read_payments(params), counts, seed), "models.train_a test split"
 
 
 def _require_real_bundle(ctx) -> None:
@@ -228,12 +245,12 @@ def simulate(ctx, params: dict) -> dict:
     _require_real_bundle(ctx)
     params = dict(params or {})
     seed = int(params.get("seed", SEED))
-    df = _fixed_sample(_read_payments(params), SUITE_COUNTS, seed)
+    df, source = _suite_frame(params, SUITE_COUNTS, seed)
     policy = {**ctx.policy, **dict(params.get("policy", {}))}
     naive_cap = float(params.get("naive_amount_cap", policy["stipend_cap"]))
     evaluated = _evaluate_suite(ctx, df, policy, naive_cap)
     return {
-        "suite": {"seed": seed, "split": "models.train_a test", "counts": SUITE_COUNTS, "rows": len(df)},
+        "suite": {"seed": seed, "source": source, "counts": SUITE_COUNTS, "rows": len(df)},
         "policy": policy,
         "baselines": {
             "legacy": {"threshold": float(ctx.bundle.legacy_threshold), "disaster_context_zeroed": True},
@@ -256,7 +273,7 @@ def pareto(ctx, params: dict) -> dict:
     _require_real_bundle(ctx)
     params = dict(params or {})
     sample_counts = params.get("counts", SUITE_COUNTS)
-    df = _fixed_sample(_read_payments(params), {k: int(v) for k, v in sample_counts.items()}, int(params.get("seed", SEED)))
+    df, source = _suite_frame(params, {k: int(v) for k, v in sample_counts.items()}, int(params.get("seed", SEED)))
     base = {**ctx.policy, **dict(params.get("policy", {}))}
     grids = {
         "alpha": _grid(params, "alpha", float(base["alpha"]), (0.5, 0.75, 1.0, 1.25, 1.5)),
@@ -264,6 +281,7 @@ def pareto(ctx, params: dict) -> dict:
         "tau": _grid(params, "tau", float(base["tau"]), (0.5, 0.75, 1.0, 1.25, 1.5)),
         "tau_review": _grid(params, "tau_review", float(base.get("tau_review", base["tau"])),
                             (0.5, 0.75, 1.0, 1.25, 1.5)),
+        "theta_mule": _grid(params, "theta_mule", float(base["theta_mule"]), (0.75, 0.875, 1.0, 1.1, 1.18)),
     }
     scores = _score(ctx, df)
     reference_decisions = _decisions(ctx, df, scores, base)
@@ -285,7 +303,8 @@ def pareto(ctx, params: dict) -> dict:
                 if metrics["total_expected_harm_rupees"] > result["total_expected_harm_rupees"]
             ]
             points.append({"parameter": name, "value": value, "metrics": metrics, "loses_to": loses})
-    return {"suite_rows": len(df), "base_policy": base, "grids": grids, "baselines": references, "points": points}
+    return {"suite_rows": len(df), "suite_source": source, "base_policy": base, "grids": grids,
+            "baselines": references, "points": points}
 
 
 def _variant_detection(ctx, df: pd.DataFrame, policy: dict, variant: str) -> dict:
@@ -325,7 +344,7 @@ def redteam(ctx, params: dict) -> dict:
     params = dict(params or {})
     policy = {**ctx.policy, **dict(params.get("policy", {}))}
     tags = {**DEFAULT_TAGS, **dict(params.get("tags", {}))}
-    base_df = _read_payments(params, str(params.get("base_tag", params.get("tag", "v1"))))
+    base_df = _read_payments(params, str(params.get("base_tag", params.get("tag", "v2"))))
     base_variant = str(params.get("base_variant", "base"))
     base = _variant_detection(ctx, base_df, policy, base_variant)
     results = []

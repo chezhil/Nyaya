@@ -127,3 +127,15 @@ def test_empty_conformal_set_counts_as_uncertain():
     assert d["decision"] in ("REVIEW", "HOLD")
     d = decide({"p_fraud": 0.0, "p_mule": 0.0}, tx(amount=500.0), POLICY)  # missing set is not uncertain
     assert d["decision"] == "RELEASE"
+
+
+def test_zone_rule_turns_harm_hold_into_review_inside_a_zone():
+    pol = {**POLICY, "tau": 100.0, "tau_review": 0.0, "zone_hold_needs_mule": True}
+    tx = {"amount": 20000, "severity_tier": 4, "in_disaster_zone": 1, "merchant_category": "p2p"}
+    sc = {"p_fraud": 0.9, "p_mule": 0.0, "conformal_set": ["fraud"]}
+    d = decide(sc, tx, pol)
+    assert d["decision"] == "REVIEW" and d["release_now"] == pol["stipend_cap"]
+    assert decide(sc, tx, {**pol, "zone_hold_needs_mule": False})["decision"] == "HOLD"
+    # outside a zone and on a mule flag the rule changes nothing
+    assert decide(sc, {**tx, "in_disaster_zone": 0}, pol)["decision"] == "HOLD"
+    assert decide({**sc, "p_mule": 0.99}, tx, pol)["decision"] == "HOLD"

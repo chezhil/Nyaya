@@ -1,4 +1,4 @@
-"""Sensitivity run for the HOLD threshold (tau) and the REVIEW band (tau_review) on held-out data.
+"""Sensitivity run for tau, tau_review, theta_mule and the zone rule on held-out data.
 
     python -m engine.tune [--data ~/shared/data] [--artifacts ~/shared/nyaya/artifacts] [--tag v1]
 
@@ -24,6 +24,8 @@ from models.train_a import FRACTIONS
 ROOT = Path(__file__).resolve().parent.parent
 TAUS = [250, 500, 1000, 2000, 5000]
 TAU_REVIEWS = [0, 250, 500, 1000, 2500, 5000]
+THETAS = [0.5, 0.7, 0.8, 0.9, 0.95]
+ZONE_RULE = [False, True]
 
 
 def main() -> None:
@@ -47,12 +49,22 @@ def main() -> None:
     pop = df["population"].to_numpy()
     cap = float(policy["stipend_cap"])
 
-    def run(tau: float, tau_review: float) -> dict:
+    def run(tau: float, tau_review: float, theta: float | None = None, zone: bool | None = None) -> dict:
         pol = {**policy, "tau": tau, "tau_review": tau_review}
-        dec = np.array([decide(sc, r, pol)["decision"] for sc, r in zip(scores, rows)])
+        if theta is not None:
+            pol["theta_mule"] = theta
+        if zone is not None:
+            pol["zone_hold_needs_mule"] = zone
+        out_d = [decide(sc, r, pol) for sc, r in zip(scores, rows)]
+        dec = np.array([d["decision"] for d in out_d])
+        rel = np.array([d["release_now"] for d in out_d])
         # Money that reaches a fraudster: full amount on RELEASE, only the stipend on REVIEW, nothing on HOLD.
         leaked = np.where(dec == "RELEASE", amount, np.where(dec == "REVIEW", np.minimum(amount, cap), 0.0))
-        out = {"tau": tau, "tau_review": tau_review,
+        disp = pop == "displaced"
+        out = {"tau": tau, "tau_review": tau_review, "theta_mule": pol["theta_mule"],
+               "zone_hold_needs_mule": bool(pol.get("zone_hold_needs_mule", False)),
+               "victims_left_zero_rate": float((rel[disp] <= 0).mean()),
+               "collector_donation_hold": float((dec[pop == "collector_donation"] == "HOLD").mean()),
                "fraud_leakage_inr": float(leaked[fraud].sum()), "fraud_total_inr": float(amount[fraud].sum()),
                "fraud_hold_rate": float((dec[fraud] == "HOLD").mean()),
                "legit_hold_rate": float((dec[~fraud] == "HOLD").mean()),
@@ -65,14 +77,21 @@ def main() -> None:
 
     results = [run(t, r) for t in TAUS for r in TAU_REVIEWS]
     base = run(policy["tau"], policy["tau"])
-    write_json(args.artifacts / "engine_tune.json", {"rows_scored": int(len(df)), "plan_default": base, "grid": results})
+    # second pass: mule threshold x zone rule, over the tau / tau_review pairs that matter
+    wide = [run(t, r, th, z) for t in TAUS for r in (0, 250, 500, 1000) for th in THETAS for z in ZONE_RULE]
+    write_json(args.artifacts / "engine_tune.json", {"rows_scored": int(len(df)), "policy_file": policy,
+                                                     "plan_default": base, "grid": results, "grid_wide": wide})
     cols = ["tau", "tau_review", "fraud_leakage_inr", "fraud_hold_rate", "legit_hold_rate", "legit_review_rate",
             "displaced_hold", "displaced_review", "ato_hold", "syndicate_hold"]
+    wcols = ["tau", "tau_review", "theta_mule", "zone_hold_needs_mule", "victims_left_zero_rate", "fraud_leakage_inr",
+             "fraud_hold_rate", "legit_review_rate", "collector_donation_hold", "ato_hold", "syndicate_hold"]
     pd.set_option("display.width", 220)
     print(f"held-out rows: {len(df)}  fraud total Rs {base['fraud_total_inr']:,.0f}")
     print("plan default (tau = tau_review = %g):" % policy["tau"])
     print(pd.DataFrame([base])[cols].round(4).to_string(index=False))
     print(pd.DataFrame(results)[cols].round(4).to_string(index=False))
+    print("wide grid (theta_mule x zone rule):")
+    print(pd.DataFrame(wide)[wcols].round(4).to_string(index=False))
 
 
 if __name__ == "__main__":

@@ -310,18 +310,22 @@ class Nyaya:
                                counterfactual=self.counterfactual)
 
     def sim_hook(self, name: str, params: dict) -> dict | None:
+        """Saved result from `python -m sim.run <name> --out artifacts/sim/<name>.json` first (a live Pareto sweep
+        takes minutes); live only when asked (`{"live": true}`) or when nothing is saved yet."""
+        params = dict(params or {})
+        live = bool(params.pop("live", False))
+        cached = Path(os.environ.get("NYAYA_ARTIFACTS", ARTIFACTS)) / "sim" / f"{name}.json"
+        if cached.exists() and not live:
+            return {**json.loads(cached.read_text()), "_source": f"artifacts/sim/{cached.name}"}
         try:
             import sim  # type: ignore
 
             fn = getattr(sim, name, None)
         except ImportError:
             fn = None
-        if fn is not None:
-            return fn(self.sim_ctx(), params)
-        cached = Path(os.environ.get("NYAYA_ARTIFACTS", ARTIFACTS)) / "sim" / f"{name}.json"
-        if cached.exists():
-            return {**json.loads(cached.read_text()), "_source": str(cached.name)}
-        return None
+        if fn is None or getattr(self.bundle, "info", lambda: {})().get("kind") != "real":
+            return None
+        return {**fn(self.sim_ctx(), params), "_source": "live"}
 
     # ------------------------------------------------------------------ system
     def system(self) -> dict:
