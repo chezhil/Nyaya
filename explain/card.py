@@ -51,15 +51,23 @@ def template_card(f: dict) -> str:
             f"{unsure} Main factors: {reasons}.{clause}{cf}")
 
 
+# Examples for Granite. Clause ids and titles match docs/relief_policy.md, one example per decision, and every
+# example passes check_output with its own facts (explain/tests). Amounts differ from the demo scenarios so that
+# copied example numbers are caught by the check.
 FEW_SHOT = [
-    ({"decision": "RELEASE", "amount": 640, "merchant_category": "pharmacy", "hour": 2, "severity_tier": 4,
-      "p_fraud": 0.08, "p_mule": 0.01, "clause_id": "3.1", "clause_title": "Displaced customers"},
-     "The ₹640 pharmacy payment was released in full. It came from a disaster zone at night, which is expected "
-     "for displaced families, and there is no sign of a mule ring (policy 3.1)."),
+    ({"decision": "RELEASE", "amount": 1200, "merchant_category": "pharmacy", "hour": 1, "severity_tier": 4,
+      "p_fraud": 0.11, "p_mule": 0.01, "clause_id": "CLAUSE-01", "clause_title": "Displacement Anomaly Recognition"},
+     "The ₹1,200 pharmacy payment was released in full. It came from a disaster zone at night, which is expected "
+     "for displaced families, and there is no sign of a mule ring (policy CLAUSE-01)."),
+    ({"decision": "REVIEW", "amount": 18000, "release_now": 3000, "escrow": 15000, "escrow_hours": 48,
+      "merchant_category": "clinic", "hour": 15, "severity_tier": 5, "p_fraud": 0.88, "p_mule": 0.02,
+      "clause_id": "CLAUSE-02", "clause_title": "Provisional Survival Micro-Stipend (REVIEW)"},
+     "₹3,000 of the ₹18,000 clinic payment was sent now as a survival stipend, and the other ₹15,000 is held in "
+     "escrow for up to 48 hours while it is checked (policy CLAUSE-02)."),
     ({"decision": "HOLD", "amount": 9000, "merchant_category": "p2p", "hour": 23, "severity_tier": 5,
-      "p_fraud": 0.71, "p_mule": 0.93, "clause_id": "6.2", "clause_title": "Mule-ring override"},
+      "p_fraud": 0.71, "p_mule": 0.93, "clause_id": "CLAUSE-04", "clause_title": "Mule-Ring & Syndicate Override (HOLD)"},
      "The ₹9,000 transfer was held because the payee looks like part of a mule ring: it is collecting and "
-     "forwarding many payments quickly (policy 6.2). An analyst will review it."),
+     "forwarding many payments quickly (policy CLAUSE-04). An analyst will review it."),
 ]
 
 
@@ -94,9 +102,14 @@ def check_output(text: str, facts: dict) -> tuple[bool, str]:
     words = {"RELEASE": ("released", "paid"), "REVIEW": ("held", "escrow", "stipend"), "HOLD": ("held", "blocked")}
     if not any(w in text.lower() for w in words[facts["decision"]]):
         return False, "decision not stated"
-    other = {"RELEASE": ("blocked",), "REVIEW": ("blocked",), "HOLD": ("paid in full", "released in full")}
+    other = {"RELEASE": ("blocked",), "REVIEW": ("blocked", "paid in full", "released in full"),
+             "HOLD": ("paid in full", "released in full")}
     if any(w in text.lower() for w in other[facts["decision"]]):
         return False, "contradicts decision"
+    # A HOLD on expected harm alone (low mule score) must not be explained as a mule ring: Granite copies that wording
+    # from the HOLD example. 0.5 is below any mule threshold the policy uses, so real mule HOLDs are never rejected.
+    if facts["decision"] == "HOLD" and float(facts.get("p_mule") or 0) < 0.5 and "mule" in text.lower():
+        return False, "mule wording on a non-mule HOLD"
     return True, "ok"
 
 

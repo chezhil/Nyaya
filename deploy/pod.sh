@@ -38,7 +38,7 @@ COMMON=(--pod nyaya --restart unless-stopped -w /opt/nyaya
   -e NYAYA_GRANITE_TIMEOUT=30   # Granite 350M takes ~14-16 s per card on this 3-vCPU VM; only /explain waits for it
   -e NYAYA_ARTIFACTS=/opt/nyaya/artifacts -e NYAYA_ACCOUNTS=/data/accounts_v2.csv.gz)
 
-podman run -d --name nyaya-explainer "${COMMON[@]}" --memory 1500m \
+podman run -d --name nyaya-explainer "${COMMON[@]}" --memory 2500m \
   "$BASE" python -m uvicorn explain.server:app --host 127.0.0.1 --port 8001
 
 podman run -d --name nyaya-api "${COMMON[@]}" --memory 2g -v "$VAR:/var/nyaya:Z" \

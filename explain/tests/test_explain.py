@@ -116,3 +116,26 @@ def test_notice_fixture_is_english_only():
     assert "₹3,000" in n["en"] and "₹22,000" in n["en"]
     if n["source"] == "fixture":
         assert n["ta"] is None and n["hi"] is None
+
+
+def test_few_shot_examples_pass_their_own_check():
+    from explain.card import FEW_SHOT
+    assert {f["decision"] for f, _ in FEW_SHOT} == {"RELEASE", "REVIEW", "HOLD"}
+    for facts, text in FEW_SHOT:
+        assert check_output(text, facts) == (True, "ok"), text
+
+
+def test_review_card_saying_released_in_full_is_rejected():
+    facts = {"decision": "REVIEW", "amount": 25000, "release_now": 3000, "escrow": 22000, "escrow_hours": 48,
+             "severity_tier": 5, "hour": 14, "p_fraud": 0.92, "p_mule": 0.01, "clause_id": "CLAUSE-02"}
+    ok, why = check_output("The ₹25,000 stipend was reviewed. It was released in full (policy CLAUSE-02).", facts)
+    assert not ok and why == "contradicts decision"
+
+
+def test_non_mule_hold_explained_as_mule_ring_is_rejected():
+    facts = {"decision": "HOLD", "amount": 48000, "severity_tier": 0, "hour": 3, "p_fraud": 1.0, "p_mule": 0.0,
+             "clause_id": "CLAUSE-10"}
+    text = "The ₹48,000 transfer was held because the payee looks like part of a mule ring (policy CLAUSE-10)."
+    assert check_output(text, facts) == (False, "mule wording on a non-mule HOLD")
+    mule = {**facts, "p_mule": 0.93, "clause_id": "CLAUSE-04"}
+    assert check_output(text.replace("CLAUSE-10", "CLAUSE-04"), mule) == (True, "ok")
