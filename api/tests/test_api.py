@@ -47,7 +47,7 @@ def test_validation(client):
 
 
 def test_review_always_releases_stipend():
-    pol = {**POLICY}
+    pol = {**POLICY, "tau": 5000}  # the fallback policy uses the plan's single tau band
     tx = {"amount": 25000, "severity_tier": 5, "in_disaster_zone": 1, "merchant_category": "clinic"}
     d = fallback_policy.decide({"p_fraud": 0.4, "p_mule": 0.0, "conformal_set": ["legit", "fraud"]}, tx, pol)
     assert d["decision"] == "REVIEW"
