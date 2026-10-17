@@ -1,0 +1,65 @@
+{
+  "model": "model_b B-mlp-1",
+  "machine": "s390x",
+  "torch": "2.11.0+cpu",
+  "nnpa_available": true,
+  "cpu_threads": 3,
+  "results": [
+    {
+      "device": "cpu",
+      "batch": 1,
+      "repeats": 50,
+      "p50_ms": 0.026,
+      "p95_ms": 0.026,
+      "decisions_per_s": 38625.0,
+      "output_checksum": -4.6979
+    },
+    {
+      "device": "nnpa",
+      "batch": 1,
+      "repeats": 50,
+      "p50_ms": 0.035,
+      "p95_ms": 0.036,
+      "decisions_per_s": 28350.3,
+      "output_checksum": -4.7031
+    },
+    {
+      "device": "cpu",
+      "batch": 100,
+      "repeats": 50,
+      "p50_ms": 0.043,
+      "p95_ms": 0.044,
+      "decisions_per_s": 2340221.6,
+      "output_checksum": -837.734
+    },
+    {
+      "device": "nnpa",
+      "batch": 100,
+      "repeats": 50,
+      "p50_ms": 0.04,
+      "p95_ms": 0.041,
+      "decisions_per_s": 2483577.2,
+      "output_checksum": -840.041
+    },
+    {
+      "device": "cpu",
+      "batch": 10000,
+      "repeats": 50,
+      "p50_ms": 1.696,
+      "p95_ms": 1.799,
+      "decisions_per_s": 5896814.0,
+      "output_checksum": -84332.8594
+    },
+    {
+      "device": "nnpa",
+      "batch": 10000,
+      "repeats": 50,
+      "p50_ms": 4.16,
+      "p95_ms": 4.599,
+      "decisions_per_s": 2403980.5,
+      "output_checksum": -84531.3438
+    }
+  ],
+  "note": "Median-latency throughput incl. host-device transfer. NNPA rows only exist if measured.",
+  "max_abs_logit_diff_cpu_vs_nnpa": 0.17285919189453125
+}

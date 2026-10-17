@@ -1,0 +1,101 @@
+/**
+ * NYAYA 2.0 - Institutional-Grade Enterprise Stylesheet
+ * High-contrast dark theme optimized for IBM Z / LinuxONE Command Centers
+ */
+
+:root {
+  --bg-primary: #040711;
+  --bg-surface: #0a0f1d;
+  --bg-elevated: #111827;
+  --border-subtle: #1f293d;
+  --border-strong: #334155;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --color-brand: #3b82f6;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #f43f5e;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Tab active indicator */
+.tab-active {
+  border-bottom: 2px solid var(--color-brand) !important;
+  color: #60a5fa !important;
+  font-weight: 600;
+}
+
+/* Badge Pulse Animation */
+.badge-pulse {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.95); }
+}
+
+/* Phone Notification Mockup Frame */
+.phone-mockup {
+  border: 2px solid #1e293b;
+  border-radius: 16px;
+  background: #090d16;
+  position: relative;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+}
+
+.phone-mockup::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 4px;
+  background: #334155;
+  border-radius: 2px;
+  margin: 8px auto 12px auto;
+}
+
+/* High Contrast Metric Cards */
+.metric-box {
+  background: #090d16;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 12px;
+  transition: border-color 0.2s ease;
+}
+
+.metric-box:hover {
+  border-color: #3b82f6;
+}
+
+/* Chart Container Heights */
+.chart-container-sm {
+  height: 180px;
+  position: relative;
+}
+
+.chart-container-md {
+  height: 260px;
+  position: relative;
+}

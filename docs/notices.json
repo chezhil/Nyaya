@@ -1,0 +1,17 @@
+{
+  "RELEASE": {
+    "en": "{amount} has been paid in full. Disaster-relief protection is active for your account.",
+    "ta": "{amount} முழுமையாகச் செலுத்தப்பட்டது. பேரிடர் காலப் பாதுகாப்பு உங்கள் கணக்கிற்குச் செயல்பாட்டில் உள்ளது.",
+    "hi": "{amount} का पूरा भुगतान कर दिया गया है। आपके खाते पर आपदा-राहत सुरक्षा सक्रिय है।"
+  },
+  "REVIEW": {
+    "en": "{release_now} has been sent immediately so you can buy essentials (food, medicine, fuel). The remaining {escrow} is safely held in escrow and will auto-release within {hours} hours. Tap 'Appeal' if this is an emergency.",
+    "ta": "அத்தியாவசியப் பொருட்கள் (உணவு, மருந்து) வாங்குவதற்காக {release_now} உடனடியாக அனுப்பப்பட்டுள்ளது. மீதமுள்ள {escrow} பாதுகாப்பாக வைக்கப்பட்டுள்ளது; இது {hours} மணி நேரத்திற்குள் தானாகவே விடுவிக்கப்படும். அவசரம் என்றால் 'மேல்முறையீடு (Appeal)' என்பதைத் தட்டவும்.",
+    "hi": "आवश्यक वस्तुएं (भोजन, दवाई) खरीदने के लिए {release_now} तुरंत भेज दिए गए हैं। शेष {escrow} सुरक्षित रूप से एस्क्रो में रखे गए हैं और {hours} घंटे के भीतर स्वतः जारी हो जाएंगे। आपातकालीन स्थिति में 'अपील (Appeal)' पर टैप करें।"
+  },
+  "HOLD": {
+    "en": "This transfer of {amount} has been paused to protect your account from suspicious recipient network activity. Your existing balance is safe. Tap 'Appeal' for immediate human review.",
+    "ta": "சந்தேகத்திற்குரிய கணக்கு செயல்பாட்டிலிருந்து உங்கள் பணத்தைப் பாதுகாக்க {amount} பரிமாற்றம் தற்காலிகமாக நிறுத்தப்பட்டுள்ளது. உங்கள் கணக்கு இருப்பு பாதுகாப்பாக உள்ளது. உடனடி ஆய்வுக்கு 'மேல்முறையீடு (Appeal)' செய்யவும்.",
+    "hi": "संदिग्ध नेटवर्क गतिविधि से आपके खाते की सुरक्षा के लिए {amount} का यह लेनदेन रोका गया है। आपकी जमा राशि सुरक्षित है। तुरंत जांच के लिए 'अपील (Appeal)' पर टैप करें।"
+  }
+}
