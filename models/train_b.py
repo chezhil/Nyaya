@@ -29,7 +29,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=ARTIFACTS)
     ap.add_argument("--data", type=Path, default=DATA_DIR)
-    ap.add_argument("--tag", default="v1")
+    ap.add_argument("--tag", default="v2")
     ap.add_argument("--epochs", type=int, default=60)
     args = ap.parse_args()
 

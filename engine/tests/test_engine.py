@@ -120,3 +120,10 @@ def test_counterfactual_none_when_nothing_changes_outcome():
 
     t = tx(amount=20000.0)
     assert counterfactual(tx_features(t), scorer, POLICY, t) is None
+
+
+def test_empty_conformal_set_counts_as_uncertain():
+    d = decide(sc(p_fraud=0.1, cset=()), tx(amount=25000.0), POLICY)
+    assert d["decision"] in ("REVIEW", "HOLD")
+    d = decide({"p_fraud": 0.0, "p_mule": 0.0}, tx(amount=500.0), POLICY)  # missing set is not uncertain
+    assert d["decision"] == "RELEASE"

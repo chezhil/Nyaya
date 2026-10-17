@@ -5,7 +5,7 @@
     delta = H_F - H_H
 
     HOLD    P(mule) >= theta_mule, or delta >= tau
-    REVIEW  not HOLD, and (conformal set is {legit, fraud} or delta > -tau_review): pay the stipend now, escrow the rest
+    REVIEW  not HOLD, and (conformal set is not a single label (both or empty) or delta > -tau_review): pay the stipend now, escrow the rest
             (tau_review defaults to tau, which is the plan's |delta| < tau band; it can be set lower to narrow it)
     RELEASE otherwise
 
@@ -44,7 +44,7 @@ def decide(scores: dict, tx: dict, policy: dict) -> dict:
     tau = float(policy["tau"])
     tau_review = float(policy.get("tau_review", tau))  # plan: |delta| < tau, i.e. tau_review == tau
     cap = float(policy["stipend_cap"])
-    uncertain = len(scores.get("conformal_set", [])) > 1
+    uncertain = len(scores.get("conformal_set", ["legit"])) != 1  # {legit, fraud} or empty = unsure
 
     if float(scores.get("p_mule", 0.0)) >= float(policy["theta_mule"]) or delta >= tau:
         decision, release_now = "HOLD", 0.0
