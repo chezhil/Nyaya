@@ -19,7 +19,7 @@ from data.features import (
     static_account_features,
 )
 
-ACCOUNTS_PATH = Path(os.environ.get("NYAYA_ACCOUNTS", Path.home() / "shared" / "data" / "accounts_v1.csv.gz"))
+ACCOUNTS_PATH = Path(os.environ.get("NYAYA_ACCOUNTS", Path.home() / "shared" / "data" / "accounts_v2.csv.gz"))
 
 
 class FeatureStore:

@@ -6,7 +6,7 @@ COPY deploy/requirements.txt /tmp/nyaya-requirements.txt
 RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/nyaya-requirements.txt
 WORKDIR /opt/nyaya
 ENV PYTHONPATH=/opt/nyaya PYTHONUNBUFFERED=1 NYAYA_ARTIFACTS=/opt/nyaya/artifacts NYAYA_LEDGER=/var/nyaya/ledger.jsonl \
-    NYAYA_LEDGER_KEY_FILE=/var/nyaya/ledger.key NYAYA_ACCOUNTS=/data/accounts_v1.csv.gz
+    NYAYA_LEDGER_KEY_FILE=/var/nyaya/ledger.key NYAYA_ACCOUNTS=/data/accounts_v2.csv.gz
 EXPOSE 8000
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
