@@ -1,3 +1,6 @@
+# NOT USED by deploy/pod.sh: podman 5.8 on the server can't build or commit on top of this base image
+# ("unsupported MIME type for compression"), so pod.sh runs the base image as is with the same env (see there).
+# Kept to document the intended image.
 # NYAYA runtime image: IBM's s390x Jupyter image (Python 3.12, torch + NNPA, xgboost, llama_cpp, Granite gguf)
 # plus the three pip packages in requirements.txt. Code is mounted from ~/shared/nyaya at run time (deploy/pod.sh),
 # so a `git pull` + `podman pod restart nyaya` ships new code without a rebuild.
@@ -6,7 +9,7 @@ COPY deploy/requirements.txt /tmp/nyaya-requirements.txt
 RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/nyaya-requirements.txt
 WORKDIR /opt/nyaya
 ENV PYTHONPATH=/opt/nyaya PYTHONUNBUFFERED=1 NYAYA_ARTIFACTS=/opt/nyaya/artifacts NYAYA_LEDGER=/var/nyaya/ledger.jsonl \
-    NYAYA_LEDGER_KEY_FILE=/var/nyaya/ledger.key NYAYA_ACCOUNTS=/data/accounts_v1.csv.gz
+    NYAYA_LEDGER_KEY_FILE=/var/nyaya/ledger.key NYAYA_ACCOUNTS=/data/accounts_v2.csv.gz
 EXPOSE 8000
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

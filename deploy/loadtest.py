@@ -1,7 +1,7 @@
 """Load test for POST /api/v1/evaluate using payments from the generated data (stdlib only).
 
     podman exec notebook python /home/ibm-user/shared/nyaya/deploy/loadtest.py --url http://host.containers.internal:8000 \
-        --data /home/ibm-user/shared/data/nyaya_v1.csv.gz --n 2000 --concurrency 8
+        --data /home/ibm-user/shared/data/nyaya_v2.csv.gz --n 2000 --concurrency 8
 
 Prints client-side p50/p95/p99 and throughput, plus the server's own latency stats from /api/v1/system.
 """
