@@ -3,11 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NYAYA — Disaster-Aware Real-Time Banking Fraud Decision Engine</title>
+  <title>NYAYA — Disaster-Aware Fraud Decisions on IBM LinuxONE</title>
+  
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom Institutional Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -24,7 +28,7 @@
             },
             slate: {
               850: '#0f172a',
-              900: '#090d16',
+              900: '#0a0f1d',
               950: '#040711',
             }
           }
@@ -32,70 +36,72 @@
       }
     }
   </script>
-  <style>
-    /* Custom scrollbars & smooth transitions */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    .tab-active { border-bottom: 2px solid #3b82f6; color: #60a5fa; font-weight: 600; }
-    .badge-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+<body class="min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
 
-  <!-- TOP ENTERPRISE HEADER -->
-  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 sticky top-0 z-50 shadow-lg">
+  <!-- ========================================================================================= -->
+  <!-- TOP INSTITUTIONAL HEADER BAR -->
+  <!-- ========================================================================================= -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3.5 sticky top-0 z-50 shadow-xl">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-      <!-- Title & Branding -->
+      
+      <!-- Title & Architecture Indicator -->
       <div class="flex items-center space-x-4">
-        <div class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-xl px-3 py-1.5 rounded-lg shadow-md tracking-wider flex items-center space-x-1">
+        <div class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-xl px-3.5 py-1.5 rounded-lg shadow-md tracking-wider flex items-center space-x-1.5">
           <span>NYAYA</span>
-          <span class="text-xs bg-blue-950 px-1.5 py-0.5 rounded text-blue-300 font-mono ml-1">2.0</span>
+          <span class="text-[10px] bg-blue-950 px-1.5 py-0.5 rounded text-blue-300 font-mono">v4</span>
         </div>
         <div>
           <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-            Disaster-Aware Real-Time Banking Fraud Decision Engine
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700/50">IBM LinuxONE (s390x)</span>
+            NYAYA — Disaster-Aware Fraud Decisions on IBM LinuxONE
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800">s390x Big Endian</span>
           </h1>
           <p class="text-xs text-slate-400">
-            Telum AI Acceleration (NNPA) · CPACF Hardware Crypto · Multi-Framework (XGBoost + PyTorch + Granite 350M)
+            Real-Time AI for Critical Decisions · IBM Z Datathon 2026 · Multi-Model (XGBoost + PyTorch NNPA + Granite 350M)
           </p>
         </div>
       </div>
 
-      <!-- Environment & Mode Pill -->
+      <!-- Live Connection Switcher & Status Pill -->
       <div class="flex items-center gap-3">
-        <!-- Live vs Mock Indicator -->
-        <div id="modePill" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-amber-950/70 text-amber-300 border border-amber-700/60">
+        <!-- Status Pill -->
+        <div id="connectionStatusPill" class="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-950/70 text-amber-300 border border-amber-700/60 shadow">
           <span class="w-2 h-2 rounded-full bg-amber-400 badge-pulse"></span>
-          <span id="modeLabel">[MODE: LOCAL DEMO FIXTURES — AWAITING BACKEND]</span>
+          <span id="connectionStatusText">OFFLINE FALLBACK: Using Local Fixtures</span>
         </div>
 
-        <!-- Telemetry Badge -->
-        <div class="hidden lg:flex items-center gap-2 bg-slate-950/80 px-3 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300">
-          <span>Arch: <strong class="text-blue-400" id="telemetryArch">s390x</strong></span>
-          <span class="text-slate-600">|</span>
-          <span>Latency: <strong class="text-emerald-400" id="telemetryLatency">3.8ms</strong></span>
-          <span class="text-slate-600">|</span>
-          <span>SELinux: <strong class="text-indigo-400">Enforcing</strong></span>
-        </div>
-
-        <!-- Backend URL Config Modal Trigger -->
-        <button onclick="toggleConfigModal()" title="Configure API Endpoint" class="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800">
+        <!-- Settings Button -->
+        <button onclick="toggleConfigModal()" title="Configure Backend API URL" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
         </button>
       </div>
     </div>
+
+    <!-- PLATFORM HARDWARE TELEMETRY STRIP (POPULATED FROM GET /system) -->
+    <div class="max-w-7xl mx-auto mt-2 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-y-1 text-[11px] font-mono text-slate-400">
+      <div class="flex items-center space-x-3">
+        <span>Arch: <strong class="text-blue-400 font-bold" id="hwArch">s390x Big Endian</strong></span>
+        <span class="text-slate-700">•</span>
+        <span>Telum Accelerator: <strong class="text-indigo-400 font-bold" id="hwTelum">nnpa: true</strong></span>
+        <span class="text-slate-700">•</span>
+        <span>Crypto: <strong class="text-emerald-400 font-bold" id="hwCrypto">CPACF AES-256-GCM / SHA-256</strong></span>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span>Security: <strong class="text-slate-300 font-bold" id="hwSecurity">SELinux Enforcing · Rootless Podman</strong></span>
+        <span class="text-slate-700">•</span>
+        <span>Latency: <strong class="text-emerald-400 font-bold" id="hwLatency">3.72ms</strong></span>
+      </div>
+    </div>
   </header>
 
+  <!-- ========================================================================================= -->
   <!-- TAB NAVIGATION -->
-  <nav class="bg-slate-900/80 border-b border-slate-800 px-6">
+  <!-- ========================================================================================= -->
+  <nav class="bg-slate-900/90 border-b border-slate-800 px-6 backdrop-blur">
     <div class="max-w-7xl mx-auto flex space-x-8 text-sm">
       <button onclick="switchTab('tab-replay')" id="btn-tab-replay" class="py-3 px-1 text-slate-400 hover:text-white tab-active flex items-center gap-2">
         <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        ⭐ 1. Cyclone Replay Stream
+        ⭐ 1. Cyclone Replay
       </button>
       <button onclick="switchTab('tab-xray')" id="btn-tab-xray" class="py-3 px-1 text-slate-400 hover:text-white flex items-center gap-2">
         <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -112,142 +118,149 @@
     </div>
   </nav>
 
-  <!-- MAIN VIEWPORT -->
-  <main class="max-w-7xl mx-auto p-6 flex-grow w-full">
+  <!-- ========================================================================================= -->
+  <!-- MAIN WORKSPACE -->
+  <!-- ========================================================================================= -->
+  <main class="max-w-7xl mx-auto p-6 flex-grow w-full space-y-6">
 
     <!-- ========================================================================================= -->
-    <!-- TAB 1: CYCLONE REPLAY STREAM -->
+    <!-- TAB 1: CYCLONE REPLAY (SIDE-BY-SIDE LIVE SIMULATION) -->
     <!-- ========================================================================================= -->
     <section id="tab-replay" class="space-y-6">
-      <!-- Headline Metric Banner (Guaranteed by Design) -->
-      <div class="bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-purple-900/40 border border-blue-700/50 rounded-xl p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Headline Metric Banner (#20) -->
+      <div class="bg-gradient-to-r from-blue-950/80 via-indigo-950/60 to-purple-950/80 border border-blue-700/60 rounded-xl p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-5">
         <div>
-          <span class="text-[11px] font-mono uppercase tracking-widest text-blue-300 font-bold bg-blue-950 px-2.5 py-1 rounded-full border border-blue-700">Guaranteed Headline Metric by Design</span>
-          <h2 class="text-2xl font-black text-white mt-2">
-            Disaster Victims Left With ₹0: 
-            <span class="text-rose-400 line-through mr-2">Legacy 44.2%</span>
-            <span class="text-emerald-400 font-extrabold">NYAYA 0.0%</span>
+          <span class="text-[10px] font-mono uppercase tracking-widest text-blue-300 font-bold bg-blue-900/80 px-2.5 py-0.5 rounded-full border border-blue-600">Guaranteed Headline Metric (#20)</span>
+          <h2 class="text-2xl font-black text-white mt-1.5 flex items-center flex-wrap gap-2">
+            Displaced Victims Left with ₹0:
+            <span class="text-rose-400 line-through">Legacy 44.2%</span>
+            <span class="text-emerald-400 font-extrabold text-3xl">NYAYA 0.0%</span>
           </h2>
           <p class="text-xs text-slate-300 mt-1">
-            Because NYAYA’s <strong class="text-amber-300">REVIEW (Provisional Survival Micro-Stipend)</strong> guarantees up to ₹3,000 liquid sustenance cash immediately, no legitimate displaced victim is frozen with zero money.
+            <strong>Guaranteed by Survival Stipend Design:</strong> In an active disaster zone, NYAYA never freezes an innocent victim to ₹0. It disburses an immediate ₹3,000 liquid micro-stipend for food and pharmacy needs, buffering the balance.
           </p>
         </div>
-        <!-- Replay Control Bar -->
-        <div class="flex items-center space-x-3 bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-          <button id="btnReplayPlay" onclick="toggleReplay()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 shadow">
-            <svg id="replayPlayIcon" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-            <span id="replayPlayText">Start Replay</span>
+
+        <!-- Replay Control Action Bar -->
+        <div class="bg-slate-900/90 border border-slate-700 p-3 rounded-xl flex items-center space-x-3 shadow-lg">
+          <button id="btnReplayToggle" onclick="toggleReplay()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-mono font-bold flex items-center gap-2 shadow">
+            <svg id="replayBtnIcon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+            <span id="replayBtnText">Start Replay</span>
           </button>
-          <button onclick="stepReplayHour()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded text-xs border border-slate-700">
+          <button onclick="stepReplay()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-mono border border-slate-700">
             Step +1h
           </button>
-          <button onclick="resetReplay()" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-2 py-1.5 rounded text-xs">
+          <button onclick="resetReplay()" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-2.5 py-2 rounded-lg text-xs font-mono">
             Reset
           </button>
-          <div class="border-l border-slate-700 pl-3 flex items-center space-x-2 text-xs font-mono">
-            <span class="text-slate-400">Hour:</span>
-            <span id="replayHourBadge" class="text-blue-400 font-bold text-sm">H00:00</span>
+          <div class="border-l border-slate-700 pl-3 text-right">
+            <div id="replayHourText" class="text-sm font-mono font-bold text-blue-400">Hour 0:00</div>
+            <div class="text-[10px] text-slate-400">Timeline</div>
           </div>
         </div>
       </div>
 
-      <!-- Severity & Progress Curve -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <div class="flex justify-between items-center text-xs font-mono mb-2">
-          <span class="text-slate-400">Cyclone Progression: <strong class="text-white" id="replayCyclonePhase">Landfall Approaching (T0)</strong></span>
-          <span class="text-slate-400">Severity Tier: <strong class="text-amber-400" id="replaySeverityTier">Tier 1 (Watch)</strong></span>
+      <!-- Chennai Cyclone Timeline Scrubber -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div class="flex justify-between items-center text-xs font-mono">
+          <span class="text-slate-300">Preset Scenario: <strong class="text-white">Chennai Cyclone Event (24-Hour Landfall)</strong></span>
+          <span class="text-slate-400">Current Phase: <strong class="text-amber-400" id="replayPhaseText">Peacetime Baseline</strong></span>
+          <span id="replaySeverityBadge" class="px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-700 font-bold">Severity Tier 0</span>
         </div>
-        <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
-          <div id="replayProgressBar" class="bg-gradient-to-r from-blue-500 via-amber-500 to-rose-600 h-3 w-0 transition-all duration-300"></div>
+        <input type="range" min="0" max="24" step="1" value="0" id="replayScrubber" class="w-full accent-blue-500 cursor-pointer">
+        <div class="flex justify-between text-[10px] font-mono text-slate-500">
+          <span>H00 (Peacetime)</span>
+          <span>H06 (Alert Issued)</span>
+          <span>H12 (Category-4 Eye Landfall)</span>
+          <span>H18 (Peak Flood Surge)</span>
+          <span>H24 (Relief Camp Stabilization)</span>
         </div>
       </div>
 
-      <!-- Side-by-Side Comparison Stream (Legacy vs NYAYA) -->
+      <!-- Split Screen Comparison: Left Legacy Engine vs Right NYAYA -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        <!-- LEFT: LEGACY FRAUD ENGINE -->
-        <div class="bg-slate-900/90 border border-rose-900/40 rounded-xl p-5 shadow-lg space-y-4">
+        <!-- LEFT: LEGACY ENGINE -->
+        <div class="bg-slate-900/90 border border-rose-900/40 rounded-xl p-5 space-y-4 shadow-lg">
           <div class="flex justify-between items-center border-b border-rose-900/40 pb-3">
             <div>
-              <span class="text-[10px] font-mono text-rose-400 uppercase tracking-wider font-bold">Industry Baseline</span>
-              <h3 class="text-base font-bold text-white flex items-center gap-2">
-                Legacy FICO/Falcon Rules Engine
-              </h3>
+              <span class="text-[10px] font-mono text-rose-400 uppercase tracking-wider font-bold">Standard Industry Baseline</span>
+              <h3 class="text-base font-bold text-white">Legacy Bank Fraud Engine (Static Rules)</h3>
             </div>
-            <span class="text-xs font-mono px-2 py-1 rounded bg-rose-950 text-rose-300 border border-rose-800/60">Binary 0/1 Freeze</span>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">Static 1% FPR Rule</span>
           </div>
 
-          <!-- Legacy Counters -->
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
-              <div class="text-xs text-slate-400">Victims Frozen</div>
-              <div id="legacyFrozenCount" class="text-xl font-bold text-rose-400 font-mono mt-1">0</div>
-              <div class="text-[10px] text-rose-500" id="legacyFrozenPct">0.0% false freeze</div>
+          <!-- Legacy Metric Counters -->
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="metric-box border-rose-900/50">
+              <div class="text-[11px] text-slate-400">Victims Frozen</div>
+              <div id="legacyFreezeCount" class="text-xl font-bold font-mono text-rose-400 mt-1">2</div>
+              <div id="legacyFreezePct" class="text-[10px] text-rose-500 font-mono">34.0% false freeze</div>
             </div>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
-              <div class="text-xs text-slate-400">Cash Delivered</div>
-              <div id="legacyCashDelivered" class="text-lg font-bold text-slate-300 font-mono mt-1">₹0</div>
-              <div class="text-[10px] text-slate-500">food/medicine access</div>
+            <div class="metric-box">
+              <div class="text-[11px] text-slate-400">Cash Available</div>
+              <div id="legacyCashAvailable" class="text-base font-bold font-mono text-slate-300 mt-1">₹24,000</div>
+              <div class="text-[10px] text-slate-500 font-mono">severely throttled</div>
             </div>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
-              <div class="text-xs text-slate-400">Fraud Bleed</div>
-              <div id="legacyFraudBleed" class="text-lg font-bold text-amber-400 font-mono mt-1">₹0</div>
-              <div class="text-[10px] text-slate-500">syndicate drain</div>
+            <div class="metric-box">
+              <div class="text-[11px] text-slate-400">Fraud Bleed</div>
+              <div id="legacyBleedAmount" class="text-base font-bold font-mono text-amber-400 mt-1">₹0</div>
+              <div class="text-[10px] text-slate-500 font-mono">syndicate drain</div>
             </div>
           </div>
 
-          <!-- Legacy Live Feed -->
+          <!-- Streaming Feed -->
           <div class="space-y-2">
-            <div class="text-xs font-mono text-slate-400">Recent Stream Decisions:</div>
-            <div id="legacyStreamFeed" class="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs font-mono">
-              <div class="p-2.5 rounded bg-slate-950 border border-slate-800 text-slate-400 italic text-center">
-                Press "Start Replay" to stream live disaster payments...
+            <div class="text-xs font-mono text-slate-400 font-bold">Live Incoming Stream:</div>
+            <div id="legacyFeedList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+              <div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center text-xs font-mono">
+                Press "Start Replay" to initiate transaction comparison stream...
               </div>
             </div>
           </div>
         </div>
 
         <!-- RIGHT: NYAYA 2.0 (IBM LinuxONE) -->
-        <div class="bg-slate-900/90 border border-blue-900/50 rounded-xl p-5 shadow-lg space-y-4">
+        <div class="bg-slate-900/90 border border-blue-900/50 rounded-xl p-5 space-y-4 shadow-lg">
           <div class="flex justify-between items-center border-b border-blue-900/40 pb-3">
             <div>
-              <span class="text-[10px] font-mono text-blue-400 uppercase tracking-wider font-bold">IBM LinuxONE s390x Engine</span>
-              <h3 class="text-base font-bold text-white flex items-center gap-2">
-                NYAYA 2.0 Tri-State Harm Engine
-              </h3>
+              <span class="text-[10px] font-mono text-blue-400 uppercase tracking-wider font-bold">IBM LinuxONE (s390x) Native</span>
+              <h3 class="text-base font-bold text-white">NYAYA 2.0 Tri-State Harm Engine</h3>
             </div>
-            <span class="text-xs font-mono px-2 py-1 rounded bg-blue-950 text-blue-300 border border-blue-800/60">Release / Review / Hold</span>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-bold">RELEASE · REVIEW · HOLD</span>
           </div>
 
-          <!-- NYAYA Counters -->
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
-              <div class="text-xs text-slate-400">Victims Left ₹0</div>
-              <div id="nyayaFrozenCount" class="text-xl font-bold text-emerald-400 font-mono mt-1">0</div>
-              <div class="text-[10px] text-emerald-500" id="nyayaFrozenPct">0.0% (Guaranteed)</div>
+          <!-- NYAYA Metric Counters -->
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="metric-box border-emerald-900/60 bg-emerald-950/20">
+              <div class="text-[11px] text-emerald-300">Victims Left ₹0</div>
+              <div id="nyayaZeroVictims" class="text-xl font-bold font-mono text-emerald-400 mt-1">0.0%</div>
+              <div class="text-[10px] text-emerald-500 font-mono">Guaranteed by Design</div>
             </div>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
-              <div class="text-xs text-slate-400">Emergency Liquidity</div>
-              <div id="nyayaCashDelivered" class="text-lg font-bold text-emerald-400 font-mono mt-1">₹0</div>
-              <div class="text-[10px] text-emerald-500" id="nyayaStipendDisbursed">₹0 in micro-stipends</div>
+            <div class="metric-box border-blue-900/50">
+              <div class="text-[11px] text-slate-400">Emergency Cash</div>
+              <div id="nyayaCashAvailable" class="text-base font-bold font-mono text-emerald-400 mt-1">₹24,000</div>
+              <div id="nyayaStipendsDisbursed" class="text-[10px] text-emerald-500 font-mono">0 micro-stipends</div>
             </div>
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
-              <div class="text-xs text-slate-400">Syndicates Blocked</div>
-              <div id="nyayaFraudBlocked" class="text-lg font-bold text-indigo-400 font-mono mt-1">0</div>
-              <div class="text-[10px] text-indigo-400">Mule rings neutralized</div>
+            <div class="metric-box border-indigo-900/50">
+              <div class="text-[11px] text-slate-400">Syndicates Caught</div>
+              <div id="nyayaBlockedCount" class="text-base font-bold font-mono text-indigo-400 mt-1">0 rings blocked</div>
+              <div class="text-[10px] text-indigo-500 font-mono">PyTorch NNPA Graph</div>
             </div>
           </div>
 
-          <!-- NYAYA Live Feed -->
+          <!-- Streaming Feed -->
           <div class="space-y-2">
-            <div class="text-xs font-mono text-slate-400">Tri-State Output Stream:</div>
-            <div id="nyayaStreamFeed" class="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs font-mono">
-              <div class="p-2.5 rounded bg-slate-950 border border-slate-800 text-slate-400 italic text-center">
-                Press "Start Replay" to stream live disaster payments...
+            <div class="text-xs font-mono text-slate-400 font-bold">Tri-State Decision Feed (Click row to X-Ray):</div>
+            <div id="nyayaFeedList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+              <div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center text-xs font-mono">
+                Press "Start Replay" to initiate transaction comparison stream...
               </div>
             </div>
           </div>
         </div>
+
       </div>
     </section>
 
@@ -255,207 +268,245 @@
     <!-- TAB 2: TRANSACTION X-RAY & MULTILINGUAL NOTICE -->
     <!-- ========================================================================================= -->
     <section id="tab-xray" class="space-y-6 hidden">
-      <!-- Scenario Selector Banner -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
-          <span class="text-xs font-mono text-blue-400 font-bold uppercase tracking-wider">Curated Judge Scenarios</span>
-          <h2 class="text-lg font-bold text-white mt-0.5">Select a Test Fixture or Inspect Any Transaction</h2>
+      
+      <!-- Quick-Load Scenario Buttons (All 6 Fixtures from Plan v4 §8) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2.5">
+        <div class="flex justify-between items-center text-xs font-mono">
+          <span class="text-slate-400 font-bold uppercase tracking-wider">Plan v4 §8 Curated Test Fixtures:</span>
+          <span class="text-blue-400">Click to evaluate live in X-Ray</span>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button onclick="loadScenario(1)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded border border-slate-700 text-slate-200">
-            1. Displaced Mother (Meena)
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <button id="btnFixture1" onclick="loadScenario(1)" class="px-2.5 py-1.5 bg-blue-600 text-white font-bold rounded text-xs border border-blue-500 text-left truncate">
+            1. Meena (Camp 2 AM)
           </button>
-          <button onclick="loadScenario(2)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded border border-slate-700 text-slate-200">
+          <button id="btnFixture2" onclick="loadScenario(2)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
             2. Clinic Payment (REVIEW)
           </button>
-          <button onclick="loadScenario(3)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded border border-slate-700 text-slate-200">
+          <button id="btnFixture3" onclick="loadScenario(3)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
             3. Syndicate Mule Spoofer
           </button>
-          <button onclick="loadScenario(4)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded border border-slate-700 text-slate-200">
+          <button id="btnFixture4" onclick="loadScenario(4)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
             4. Peacetime Normal
           </button>
-          <button onclick="loadScenario(5)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded border border-slate-700 text-slate-200">
+          <button id="btnFixture5" onclick="loadScenario(5)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
             5. Peacetime ATO
+          </button>
+          <button id="btnFixture6" onclick="loadScenario(6)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
+            6. Red-Team Smurfing
           </button>
         </div>
       </div>
 
-      <!-- X-Ray Layout: 2 Columns (Left: Transaction & Decision Engine, Right: Explainability & Notices) -->
+      <!-- X-Ray Layout: 2 Columns -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- LEFT: Transaction Inputs & Multi-Model Inference (5 Cols) -->
+        <!-- LEFT COLUMN: Custom Evaluator & Diagnostic Gauges (5 Cols) -->
         <div class="lg:col-span-5 space-y-5">
-          <!-- Transaction Metadata Card -->
+          
+          <!-- Custom Transaction Evaluator Form -->
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-              <span class="text-xs font-mono text-slate-400">Transaction ID: <strong class="text-white font-mono" id="xrayTxId">TX_78492011</strong></span>
-              <span id="xrayDecisionBadge" class="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-700">RELEASE (100%)</span>
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+              <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">Transaction Evaluator</h3>
+              <span class="text-[10px] font-mono text-slate-400" id="xrayTxId">TX_78492011</span>
             </div>
 
             <div class="grid grid-cols-2 gap-3 text-xs font-mono">
               <div>
-                <span class="text-slate-400">Amount:</span>
-                <div class="text-base font-bold text-white mt-0.5" id="xrayAmount">₹25,000</div>
+                <label class="text-slate-400">Amount (₹):</label>
+                <input type="number" id="inputAmount" value="1800" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
               </div>
               <div>
-                <span class="text-slate-400">Disbursed Now:</span>
-                <div class="text-base font-bold text-emerald-400 mt-0.5" id="xrayDisbursedNow">₹25,000</div>
+                <label class="text-slate-400">Category:</label>
+                <select id="inputCategory" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
+                  <option value="pharmacy">pharmacy</option>
+                  <option value="clinic">clinic</option>
+                  <option value="grocery">grocery</option>
+                  <option value="fuel">fuel</option>
+                  <option value="cash_out">cash_out</option>
+                  <option value="transfer">transfer</option>
+                  <option value="donation">donation</option>
+                </select>
               </div>
               <div>
-                <span class="text-slate-400">Category:</span>
-                <div class="text-slate-200 mt-0.5" id="xrayCategory">HEALTHCARE_CLINIC</div>
+                <label class="text-slate-400">Severity Tier (0-5):</label>
+                <input type="number" id="inputSeverity" min="0" max="5" value="4" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
               </div>
               <div>
-                <span class="text-slate-400">Escrow Buffer:</span>
-                <div class="text-amber-400 font-bold mt-0.5" id="xrayEscrow">₹0 (48h)</div>
+                <label class="text-slate-400">Hour of Day (0-23):</label>
+                <input type="number" id="inputHour" min="0" max="23" value="2" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
               </div>
               <div>
-                <span class="text-slate-400">Displacement Shift:</span>
-                <div class="text-slate-200 mt-0.5" id="xrayGeoShift">82 km (Camp Shelter)</div>
+                <label class="text-slate-400">Geo Shift (km):</label>
+                <input type="number" id="inputGeoShift" value="82.5" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
               </div>
               <div>
-                <span class="text-slate-400">Time / Device:</span>
-                <div class="text-slate-200 mt-0.5" id="xrayTimeDevice">02:14 AM / Borrowed</div>
+                <label class="text-slate-400">Fan-In (15m):</label>
+                <input type="number" id="inputFanIn" value="1" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
+              </div>
+              <div class="col-span-2">
+                <label class="text-slate-400">Mule Centrality Index (MCI 0.0-1.0):</label>
+                <input type="number" step="0.01" min="0" max="1" id="inputMci" value="0.02" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
               </div>
             </div>
 
-            <!-- Multi-Model Probabilities -->
-            <div class="border-t border-slate-800 pt-3 space-y-2.5">
-              <div class="text-xs font-mono text-slate-400 font-bold">Predictive Model Inference:</div>
-              <!-- Model A: XGBoost Calibrated -->
-              <div>
-                <div class="flex justify-between text-xs font-mono mb-1">
-                  <span>Model A (XGBoost Calibrated):</span>
-                  <span class="font-bold text-blue-400" id="xrayPFraud">P(Fraud) = 0.38</span>
-                </div>
-                <div class="w-full bg-slate-800 rounded-full h-2">
-                  <div id="xrayPFraudBar" class="bg-blue-500 h-2 rounded-full w-2/5"></div>
-                </div>
-              </div>
-              <!-- Model B: PyTorch NNPA Mule -->
-              <div>
-                <div class="flex justify-between text-xs font-mono mb-1">
-                  <span>Model B (PyTorch Telum NNPA):</span>
-                  <span class="font-bold text-purple-400" id="xrayPMule">P(MuleRing) = 0.04</span>
-                </div>
-                <div class="w-full bg-slate-800 rounded-full h-2">
-                  <div id="xrayPMuleBar" class="bg-purple-500 h-2 rounded-full w-[4%]"></div>
-                </div>
-              </div>
-              <!-- Conformal Set -->
-              <div class="flex justify-between items-center text-xs font-mono pt-1">
-                <span class="text-slate-400">Conformal Prediction Set (90%):</span>
-                <span id="xrayConformalSet" class="px-2 py-0.5 rounded bg-slate-800 text-indigo-300 border border-slate-700 font-bold">{legit, fraud} (REVIEW)</span>
-              </div>
-            </div>
-
-            <!-- Manual Re-eval CTA -->
-            <button onclick="reEvaluateCurrentTx()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-xs font-mono font-bold tracking-wider uppercase shadow">
-              Run Evaluation via LinuxONE API
+            <button onclick="evaluateCustomForm()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-mono font-bold tracking-wider uppercase shadow">
+              Run Real-Time LinuxONE Decision
             </button>
           </div>
 
-          <!-- TreeSHAP Feature Attributions -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-            <h4 class="text-xs font-mono text-slate-400 uppercase tracking-wider font-bold">XGBoost TreeSHAP Feature Attributions</h4>
-            <div class="h-44">
-              <canvas id="shapChart"></canvas>
+          <!-- Decision Banner & Uncertainty Panel -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-mono text-slate-400 font-bold uppercase tracking-wider">Engine Output</span>
+              <span class="text-[10px] font-mono text-slate-400">Latency: <strong id="xrayLatency" class="text-emerald-400">3.42 ms</strong></span>
             </div>
-            <p class="text-[11px] text-slate-400 leading-tight">
-              Computed natively via <code class="text-blue-300 font-mono">booster.predict(pred_contribs=True)</code> in sub-millisecond latency on s390x without external SHAP dependencies.
-            </p>
+
+            <!-- Giant Decision Badge -->
+            <div id="xrayDecisionBadge" class="p-3 rounded-lg text-center font-mono font-bold text-sm uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-600 shadow">
+              RELEASE (100% Instant Payout)
+            </div>
+
+            <!-- Financial Liquidity Breakdown -->
+            <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+                <div class="text-slate-400">Liquid Payout Now:</div>
+                <div id="xrayAmountDisbursed" class="text-base font-bold text-emerald-400 mt-1">₹1,800</div>
+              </div>
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+                <div class="text-slate-400">Buffered in Escrow:</div>
+                <div id="xrayEscrowHeld" class="text-base font-bold text-amber-400 mt-1">₹0</div>
+              </div>
+            </div>
+
+            <!-- Dual Models & Conformal Set -->
+            <div class="space-y-2.5 pt-2 border-t border-slate-800 text-xs font-mono">
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>Model A (XGBoost Calibrated):</span>
+                  <span id="valPFraud" class="font-bold text-blue-400">0.312</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2">
+                  <div id="barPFraud" class="bg-blue-500 h-2 rounded-full w-[31%]"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>Model B (PyTorch Telum NNPA):</span>
+                  <span id="valPMule" class="font-bold text-purple-400">0.024</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2">
+                  <div id="barPMule" class="bg-purple-500 h-2 rounded-full w-[2.4%]"></div>
+                </div>
+              </div>
+
+              <div class="flex justify-between items-center pt-1">
+                <span class="text-slate-400">Conformal Set (90%):</span>
+                <span id="valConformalSet" class="px-2 py-0.5 rounded bg-slate-950 text-indigo-300 border border-slate-700 font-bold">{legit}</span>
+              </div>
+
+              <div class="flex justify-between items-center">
+                <span class="text-slate-400">Net Harm Delta (&Delta;H = H_F - H_H):</span>
+                <span id="valHarmDelta" class="font-bold text-emerald-400">-1.45</span>
+              </div>
+              <div class="text-[10px] text-slate-500">Model: <span id="xrayModelVersion">xgboost-3.4.1+torch-nnpa-v1</span></div>
+            </div>
+          </div>
+
+          <!-- TreeSHAP Feature Attributions Bar Chart -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+            <h4 class="text-xs font-mono text-slate-400 uppercase tracking-wider font-bold">Top-3 TreeSHAP Feature Contributions</h4>
+            <div class="chart-container-sm">
+              <canvas id="chartShap"></canvas>
+            </div>
           </div>
         </div>
 
-        <!-- RIGHT: Policy, Counterfactual, Granite Card & Multilingual Notice (7 Cols) -->
+        <!-- RIGHT COLUMN: Counterfactual, Policy, Granite & Notice Phone (7 Cols) -->
         <div class="lg:col-span-7 space-y-5">
           
-          <!-- BM25 Policy Grounding & Counterfactual Box -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-            <!-- Counterfactual Reasoning -->
-            <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <div class="flex items-center space-x-2 text-xs font-mono text-blue-400 font-bold">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <span>Automated Counterfactual Explanation:</span>
-              </div>
-              <p class="text-xs text-slate-300 mt-1.5" id="xrayCounterfactual">
-                "This transaction would be converted from REVIEW to full RELEASE if the recipient counterparty had a verified emergency healthcare provider accreditation."
-              </p>
+          <!-- Counterfactual Card (#10) -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+            <div class="flex items-center space-x-2 text-xs font-mono text-blue-400 font-bold">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>Counterfactual Explanation (#10):</span>
             </div>
-
-            <!-- Cited Policy Clause from relief_policy.md -->
-            <div class="space-y-1.5">
-              <div class="flex justify-between items-center text-xs font-mono">
-                <span class="text-slate-400 font-bold">BM25 Cited Policy Clause:</span>
-                <span id="xrayPolicyId" class="text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800">CLAUSE-02 (Provisional Survival Micro-Stipend)</span>
-              </div>
-              <p class="text-xs text-slate-300 bg-slate-950 p-3 rounded border border-slate-800 italic" id="xrayPolicyText">
-                "Under REVIEW, the engine must execute a split-liquidity disbursement: an immediate liquid survival stipend of up to ₹3,000 (Cap_survival) so the victim is never left with ₹0, while placing the remaining balance into AES-256-GCM encrypted escrow."
-              </p>
-            </div>
+            <p class="text-xs text-slate-200 bg-slate-950 p-3 rounded-lg border border-slate-800 leading-relaxed font-sans" id="valCounterfactual">
+              "If this transaction occurred during peacetime outside an active disaster corridor, the combination of nocturnal timing and new device would trigger HOLD."
+            </p>
           </div>
 
-          <!-- IBM Granite 350M Card & Masked Facts -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+          <!-- BM25 Grounded Policy Clause Card (#14) -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+            <div class="flex justify-between items-center text-xs font-mono">
+              <span class="text-slate-400 font-bold">Policy Clause Retrieved (BM25):</span>
+              <span id="valPolicyId" class="text-indigo-400 font-bold">CLAUSE-01 — Displacement Anomaly Recognition</span>
+            </div>
+            <p class="text-xs text-slate-300 bg-slate-950 p-3 rounded-lg border border-slate-800 italic leading-relaxed" id="valPolicyText">
+              "During declared Tier 3–5 disasters, nocturnal transactions (00:00–05:00), geographic shifts up to 150 km toward relief corridors, and borrowed-device logins with zero mule-network links shall be treated as benign displacement anomalies."
+            </p>
+          </div>
+
+          <!-- IBM Granite 350M Card + Masked Prompt Inspector (#2) -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
             <div class="flex justify-between items-center">
-              <h4 class="text-xs font-mono text-slate-400 uppercase tracking-wider font-bold flex items-center gap-2">
-                <span>IBM Granite 350M Audit Explanation Card</span>
-                <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700">Masked PII</span>
-              </h4>
-              <span class="text-[10px] font-mono text-slate-400">Inference: llama.cpp s390x</span>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">IBM Granite 350M Compliance Card</span>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700 font-mono">Masked PII</span>
+              </div>
+              <button onclick="toggleMaskedPrompt()" class="text-xs font-mono text-blue-400 hover:text-blue-300 underline">
+                Inspect Masked Prompt
+              </button>
             </div>
 
-            <!-- Masked Prompt Inspector -->
-            <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-[11px] font-mono text-slate-400">
-              <span class="text-slate-400">Masked Prompt:</span>
-              <span class="text-indigo-300" id="xrayMaskedPrompt">Transaction: [ACCOUNT_MASKED_XX12] | Amount: ₹25,000 | XGBoost P(Fraud): 0.38 | PyTorch Mule: 0.04 | Disaster: Tier 4 Cyclone | Conformal: {legit, fraud} | Policy: CLAUSE-02. Summarize compliance decision.</span>
+            <!-- Toggleable Masked Prompt Drawer -->
+            <div id="maskedPromptPanel" class="hidden bg-slate-950 p-3 rounded-lg border border-indigo-900/50 text-[11px] font-mono text-indigo-200 space-y-1">
+              <span class="text-slate-400 font-bold">Zero Raw IDs Transmitted to LLM:</span>
+              <p id="valMaskedPrompt" class="select-all">Transaction: [ACCOUNT_MASKED_XX21] | Amount: ₹1,800 | Category: PHARMACY | XGBoost Calibrated P(Fraud): 0.312 | PyTorch NNPA Mule: 0.024 | Disaster: Tier 4 Cyclone | Conformal Set: {legit} | Clause: CLAUSE-01.</p>
             </div>
 
-            <!-- Granite Plain-English Output -->
-            <div class="bg-indigo-950/30 border border-indigo-800/60 p-3.5 rounded-lg text-xs text-indigo-100 font-sans leading-relaxed" id="xrayGraniteOutput">
-              "Provisional Survival Micro-Stipend granted under Policy Clause 2. Immediate liquid disbursal of ₹3,000 authorized for essential survival sustenance. Remaining ₹22,000 held in secure 48-hour escrow due to elevated location anomaly and conformal uncertainty. Zero syndicate mule linkages detected."
+            <!-- Plain English Granite Output -->
+            <div class="bg-indigo-950/25 border border-indigo-800/60 p-3.5 rounded-lg text-xs text-indigo-100 font-sans leading-relaxed" id="valGraniteOutput">
+              Transaction approved under Disaster Relief Protocol CLAUSE-01. Elevated location anomaly (82.5km) and borrowed shelter phone are mitigated by verified Chennai cyclone camp coordinates. Zero counterparty syndicate linkages detected (Mule Centrality: 0.02).
             </div>
           </div>
 
-          <!-- MULTILINGUAL USER NOTICE CARD WITH LANGUAGE TOGGLE -->
-          <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-xl p-5 space-y-4 shadow-md">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-              <div>
-                <span class="text-[10px] font-mono text-emerald-400 uppercase tracking-wider font-bold">Multilingual SMS / App Notice</span>
-                <h4 class="text-xs font-bold text-white">Direct Beneficiary Notification Template</h4>
-              </div>
-              <!-- Language Toggle Buttons -->
-              <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono">
-                <button onclick="setNoticeLanguage('ta')" id="btnLangTa" class="px-2.5 py-1 rounded bg-blue-600 text-white font-bold">தமிழ்</button>
-                <button onclick="setNoticeLanguage('hi')" id="btnLangHi" class="px-2.5 py-1 rounded text-slate-400 hover:text-white">हिन्दी</button>
-                <button onclick="setNoticeLanguage('en')" id="btnLangEn" class="px-2.5 py-1 rounded text-slate-400 hover:text-white">English</button>
+          <!-- BENEFICIARY NOTICE PHONE PREVIEW WITH 3-WAY LANGUAGE TOGGLE (#22) -->
+          <div class="phone-mockup p-5 space-y-3.5">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+              <span class="text-[10px] font-mono text-emerald-400 uppercase tracking-wider font-bold">Multilingual SMS / App Notice (#22)</span>
+              <!-- 3-Way Language Toggle -->
+              <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                <button onclick="setLanguage('ta')" id="btnLang_ta" class="px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs">தமிழ்</button>
+                <button onclick="setLanguage('hi')" id="btnLang_hi" class="px-3 py-1 rounded text-slate-400 hover:text-white text-xs">हिन्दी</button>
+                <button onclick="setLanguage('en')" id="btnLang_en" class="px-3 py-1 rounded text-slate-400 hover:text-white text-xs">EN</button>
               </div>
             </div>
 
-            <!-- Simulated Mobile Push Notification Box -->
-            <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
-              <div class="flex items-center justify-between text-xs text-slate-400 font-mono">
-                <span class="flex items-center gap-1.5 text-blue-400 font-bold">
+            <!-- Simulated SMS / Push Box -->
+            <div class="space-y-2.5">
+              <div class="flex justify-between items-center text-xs text-slate-400 font-mono">
+                <span class="text-blue-400 font-bold flex items-center gap-1.5" id="phoneNoticeHeader">
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                  <span id="noticeHeaderTitle">வங்கி அவசர அறிவிப்பு</span>
+                  வங்கி உடனடி அறிவிப்பு (Tamil)
                 </span>
                 <span>Just Now</span>
               </div>
-              <p class="text-sm font-medium text-slate-200 leading-relaxed" id="noticeBody">
-                அத்தியாவசியப் பொருட்கள் (உணவு, மருந்து) வாங்குவதற்காக ₹3,000 உடனடியாக அனுப்பப்பட்டுள்ளது. மீதமுள்ள ₹22,000 பாதுகாப்பாக வைக்கப்பட்டுள்ளது; இது 48 மணி நேரத்திற்குள் தானாகவே விடுவிக்கப்படும். அவசரம் என்றால் 'மேல்முறையீடு (Appeal)' என்பதைத் தட்டவும்.
+              <p class="text-sm font-medium text-slate-200 leading-relaxed font-sans" id="phoneNoticeBody">
+                ₹1,800 முழுமையாகச் செலுத்தப்பட்டது. பேரிடர் காலப் பாதுகாப்பு உங்கள் கணக்கிற்குச் செயல்பாட்டில் உள்ளது.
               </p>
-              <div class="pt-2 flex justify-between items-center text-xs">
-                <span class="text-slate-400 text-[11px]">Protected by NYAYA IBM Z Engine</span>
-                <button onclick="triggerOneTapAppeal()" class="text-amber-400 hover:text-amber-300 font-mono font-bold underline">
-                  மேல்முறையீடு (Appeal) செய்க &rarr;
+              <div class="pt-2 flex justify-between items-center">
+                <span class="text-[10px] text-slate-500 font-mono">Protected by NYAYA IBM Z Engine</span>
+                <button onclick="fileAppeal()" id="phoneAppealBtn" class="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 underline">
+                  மேல்முறையீடு (Appeal) செய்க →
                 </button>
               </div>
             </div>
 
-            <!-- Cryptographic Ledger Hash Stamp -->
-            <div class="flex justify-between items-center text-[11px] font-mono text-slate-400 bg-slate-950/60 p-2 rounded border border-slate-800/80">
-              <span>SHA-256 Ledger Hash:</span>
-              <span class="text-slate-300 select-all" id="xrayLedgerHash">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span>
+            <!-- SHA-256 Ledger Hash Stamp -->
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[10px] font-mono text-slate-400 flex justify-between items-center">
+              <span>SHA-256 CPACF Hash:</span>
+              <span class="text-slate-300 select-all truncate w-48 text-right" id="valLedgerHash">8f4a13b62908fca9b19e4811b7829104fa281b99a4c8520e1074a11b64917a22</span>
             </div>
           </div>
 
@@ -467,102 +518,108 @@
     <!-- TAB 3: POLICY CONSOLE, PARETO & FAIRNESS -->
     <!-- ========================================================================================= -->
     <section id="tab-policy" class="space-y-6 hidden">
-      <!-- Policy Sliders & Controls Bar -->
+      
+      <!-- Interactive Policy Sliders Bar -->
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
           <div>
-            <span class="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">Tunable Policy Console</span>
-            <h2 class="text-lg font-bold text-white">Institutional Expected-Harm Parameter Tuning</h2>
+            <span class="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">Executive Risk Governance</span>
+            <h2 class="text-lg font-bold text-white">Interactive Policy Console & Parameter Sensitivity</h2>
           </div>
-          <button onclick="resetPolicyDefaults()" class="text-xs font-mono text-blue-400 hover:text-blue-300">
-            Reset to Official Defaults
+          <button onclick="resetPolicySliders()" class="text-xs font-mono text-blue-400 hover:text-blue-300">
+            Reset to Grounded Defaults
           </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-5 text-xs font-mono">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono">
           <!-- Alpha Slider -->
-          <div class="space-y-2 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
             <div class="flex justify-between items-center">
-              <span class="text-slate-300 font-bold">&alpha; (Disaster Severity Exponent):</span>
+              <span class="text-slate-300 font-bold">&alpha; (Severity Exponent):</span>
               <span class="text-blue-400 font-bold" id="valAlpha">0.65</span>
             </div>
-            <input type="range" min="0.1" max="1.2" step="0.05" value="0.65" id="sliderAlpha" oninput="updatePolicyParams()" class="w-full accent-blue-500">
-            <p class="text-[10px] text-slate-400">Controls exponential penalty escalation as disaster severity rises from 1 to 5.</p>
+            <input type="range" min="0.10" max="1.50" step="0.05" value="0.65" id="sliderAlpha" oninput="updatePolicySliders()" class="w-full accent-blue-500 cursor-pointer">
+            <p class="text-[10px] text-slate-500">Exponential penalty scaling as disaster severity escalates from Tier 1 to 5.</p>
           </div>
 
           <!-- Beta Slider (Grounded) -->
-          <div class="space-y-2 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
             <div class="flex justify-between items-center">
               <span class="text-slate-300 font-bold">&beta; (Wrongful Freeze Harm):</span>
               <span class="text-emerald-400 font-bold" id="valBeta">₹345</span>
             </div>
-            <input type="range" min="150" max="600" step="15" value="345" id="sliderBeta" oninput="updatePolicyParams()" class="w-full accent-emerald-500">
-            <p class="text-[10px] text-slate-400">Grounded to 1 day TN rural MGNREGS wage rate (₹345/day in 2026–27).</p>
+            <input type="range" min="100" max="2000" step="15" value="345" id="sliderBeta" oninput="updatePolicySliders()" class="w-full accent-emerald-500 cursor-pointer">
+            <p class="text-[10px] text-slate-500">Anchored to 1-day official rural MGNREGS wage for Tamil Nadu (₹345/day in 2026–27).</p>
           </div>
 
           <!-- Tau Slider -->
-          <div class="space-y-2 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
             <div class="flex justify-between items-center">
-              <span class="text-slate-300 font-bold">&tau; (Escrow Bandwidth Buffer):</span>
+              <span class="text-slate-300 font-bold">&tau; (REVIEW Band Width):</span>
               <span class="text-purple-400 font-bold" id="valTau">₹500</span>
             </div>
-            <input type="range" min="100" max="2000" step="50" value="500" id="sliderTau" oninput="updatePolicyParams()" class="w-full accent-purple-500">
-            <p class="text-[10px] text-slate-400">Threshold bandwidth for REVIEW state before executing a hard block.</p>
+            <input type="range" min="100" max="2500" step="50" value="500" id="sliderTau" oninput="updatePolicySliders()" class="w-full accent-purple-500 cursor-pointer">
+            <p class="text-[10px] text-slate-500">Threshold bandwidth for REVIEW state before triggering hard HOLD.</p>
           </div>
 
-          <!-- Stipend Cap (Grounded) -->
-          <div class="space-y-2 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
+          <!-- Cap Survival (Grounded) -->
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
             <div class="flex justify-between items-center">
-              <span class="text-slate-300 font-bold">Stipend Cap (Cap_survival):</span>
+              <span class="text-slate-300 font-bold">Cap_survival (Stipend):</span>
               <span class="text-amber-400 font-bold" id="valCap">₹3,000</span>
             </div>
-            <input type="range" min="1000" max="6000" step="500" value="3000" id="sliderCap" oninput="updatePolicyParams()" class="w-full accent-amber-500">
-            <p class="text-[10px] text-slate-400">Anchored to 50% of TN SDRF emergency flood cash relief norm (₹6,000).</p>
+            <input type="range" min="1000" max="6000" step="500" value="3000" id="sliderCap" oninput="updatePolicySliders()" class="w-full accent-amber-500 cursor-pointer">
+            <p class="text-[10px] text-slate-500">Anchored to 50% of TN SDRF emergency flood cash relief assistance norm.</p>
           </div>
         </div>
       </div>
 
-      <!-- Charts Row: Left Pareto Frontier, Right Calibration & Reliability -->
+      <!-- Charts Row: Left Pareto Frontier, Right Probability Calibration Plot -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        <!-- Live Pareto Frontier Chart -->
+        <!-- Chart 1: Pareto Frontier -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
           <div class="flex justify-between items-center">
-            <h3 class="text-xs font-mono text-slate-400 uppercase tracking-wider font-bold">Live Pareto Frontier: Financial Loss vs. Human Harm</h3>
-            <span class="text-[11px] font-mono text-blue-400">10,000 Payment Suite</span>
+            <h3 class="text-xs font-mono text-slate-300 uppercase tracking-wider font-bold">Chart 1: Live Pareto Frontier (Fraud vs. Societal Harm)</h3>
+            <span class="text-[11px] font-mono text-blue-400">10,000 Payments</span>
           </div>
-          <div class="h-64">
-            <canvas id="paretoChart"></canvas>
+          <div class="chart-container-md">
+            <canvas id="chartPareto"></canvas>
           </div>
-          <p class="text-[11px] text-slate-400">
-            Shows where <strong>Legacy Rules</strong>, <strong>Naive Bypass</strong>, and <strong>NYAYA 2.0</strong> sit. Notice NYAYA achieves the lowest combined societal harm frontier.
+          <p class="text-[11px] text-slate-400 font-sans">
+            Illustrates that NYAYA 2.0 achieves the lowest combined societal harm frontier. Dragging sliders moves the active operating point in real time.
           </p>
         </div>
 
-        <!-- Reliability Diagram (Before / After Isotonic Calibration) -->
+        <!-- Chart 2: Probability Calibration Reliability Plot (#17) -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
           <div class="flex justify-between items-center">
-            <h3 class="text-xs font-mono text-slate-400 uppercase tracking-wider font-bold">Model A Reliability Diagram (Isotonic Calibration)</h3>
-            <span class="text-[11px] font-mono text-emerald-400">Brier Score: 0.041</span>
+            <h3 class="text-xs font-mono text-slate-300 uppercase tracking-wider font-bold">Chart 2: Probability Calibration Plot (#17)</h3>
+            <span class="text-[11px] font-mono text-emerald-400">Brier: 0.112 &rarr; 0.041</span>
           </div>
-          <div class="h-64">
-            <canvas id="calibrationChart"></canvas>
+          <div class="chart-container-md">
+            <canvas id="chartCalibration"></canvas>
           </div>
-          <p class="text-[11px] text-slate-400">
-            Proves that predicted $P(\text{Fraud})$ accurately matches empirical fraud frequency, validating the rupee-scaled expected harm equation.
+          <p class="text-[11px] text-slate-400 font-sans">
+            Reliability diagram showing raw XGBoost outputs vs. Isotonic Calibrated probabilities against ideal diagonal. Required because harm formula multiplies probabilities by rupees.
           </p>
         </div>
+
       </div>
 
-      <!-- Demographic Fairness & Parity Table -->
+      <!-- Table 3: Demographic Income-Band Fairness Audit (#7) -->
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
         <div class="flex justify-between items-center">
           <div>
-            <span class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">Algorithmic Fairness Audit</span>
-            <h3 class="text-base font-bold text-white mt-0.5">Demographic & Income-Band Parity Audit (CLAUSE-06)</h3>
+            <span class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">Ethical AI / Responsible Banking (#7)</span>
+            <h3 class="text-base font-bold text-white mt-0.5">Demographic Income-Band Fairness Audit (CLAUSE-06)</h3>
           </div>
-          <span class="text-xs font-mono px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">Parity Ratio &le; 1.25x Passed ✅</span>
+          <span class="text-xs font-mono px-3 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">Parity Ratio &le; 1.25x Passed ✅</span>
         </div>
+
+        <p class="text-xs text-slate-400 font-sans">
+          Income band is <strong>strictly excluded from model features</strong> and evaluated only during post-hoc audit to verify that vulnerable, low-balance rural citizens receive equal emergency cash access.
+        </p>
 
         <div class="overflow-x-auto">
           <table class="w-full text-xs font-mono text-left text-slate-300">
@@ -605,132 +662,155 @@
           </table>
         </div>
       </div>
+
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- TAB 4: ANALYST QUEUE & RED TEAM ADVERSARIAL SUITE -->
+    <!-- TAB 4: ANALYST QUEUE, RED-TEAM SUITE & PLATFORM PROOF -->
     <!-- ========================================================================================= -->
     <section id="tab-analyst" class="space-y-6 hidden">
-      <!-- Top Row: Left Analyst Triage Queue, Right Hardware & Tamper Demo -->
+      
+      <!-- Top Row: Section A Analyst Queue (7 Cols) & Section C Tamper-Evident Ledger (5 Cols) -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- Human Analyst Operations Queue (7 Cols) -->
+        <!-- SECTION A: HUMAN-IN-THE-LOOP ANALYST QUEUE (7 COLS) -->
         <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
           <div class="flex justify-between items-center border-b border-slate-800 pb-3">
             <div>
-              <span class="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">Human-In-The-Loop Triage</span>
-              <h3 class="text-base font-bold text-white mt-0.5">Emergency Operations Analyst Queue</h3>
+              <span class="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">Human-In-The-Loop Governance</span>
+              <h3 class="text-base font-bold text-white mt-0.5">Section A: Emergency Operations Analyst Queue</h3>
             </div>
-            <span class="text-xs font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800" id="queuePendingCount">3 Pending Appeals</span>
+            <span id="queueCountBadge" class="text-xs font-mono px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-bold">3 Pending</span>
           </div>
 
-          <div id="analystQueueList" class="space-y-3">
-            <!-- Case 1 -->
-            <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
+          <div class="space-y-3">
+            <!-- Queue Item 1 -->
+            <div id="queueRow_TX_901824" class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
               <div class="flex justify-between items-start text-xs font-mono">
                 <div>
-                  <span class="font-bold text-white">TX_901824 — Meena (Chennai Relief Camp)</span>
-                  <div class="text-[11px] text-slate-400">Amount: ₹25,000 · Stipend Paid: ₹3,000 · Escrowed: ₹22,000</div>
+                  <span class="font-bold text-white">TX_901824 · Meena (Chennai Relief Camp)</span>
+                  <div class="text-[11px] text-slate-400">Total: ₹25,000 · Stipend Paid: ₹3,000 · Escrowed: ₹22,000</div>
+                  <div class="text-[10px] text-indigo-400">Payload: AES-256-GCM [f4e918c...Encrypted]</div>
                 </div>
                 <span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold">ONE-TAP APPEAL FILED</span>
               </div>
-              <p class="text-xs text-slate-300 italic">"Volunteer nurse phone used at 2 AM to pay Apollo Pharmacy for insulin supplies."</p>
-              <div class="pt-2 flex items-center justify-between">
-                <span class="text-[11px] font-mono text-slate-400">Escrow Timeout: <strong class="text-slate-300">46h 12m</strong></span>
+              <p class="text-xs text-slate-300 italic font-sans">
+                "Insulin & pediatric emergency supplies paid at midnight via volunteer camp phone. Pharmacy verified by local camp ward."
+              </p>
+              <div class="pt-2 flex justify-between items-center text-xs font-mono">
+                <span class="text-slate-400">Auto-Release: <strong class="text-emerald-400">46h 12m</strong> (CLAUSE-03)</span>
                 <div class="flex gap-2">
-                  <button onclick="adjudicateCase('TX_901824', 'APPROVE')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold rounded">Approve Full Escrow</button>
-                  <button onclick="adjudicateCase('TX_901824', 'DENY')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-bold rounded">Confirm Fraud</button>
+                  <button onclick="adjudicateQueue('TX_901824', 'APPROVE')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded">Approve Escrow</button>
+                  <button onclick="adjudicateQueue('TX_901824', 'DENY')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded">Confirm Fraud</button>
                 </div>
               </div>
             </div>
 
-            <!-- Case 2 -->
-            <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
+            <!-- Queue Item 2 -->
+            <div id="queueRow_TX_901825" class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
               <div class="flex justify-between items-start text-xs font-mono">
                 <div>
-                  <span class="font-bold text-white">TX_901825 — Ambiguous Shelter Clinic Payment</span>
-                  <div class="text-[11px] text-slate-400">Amount: ₹18,000 · Stipend Paid: ₹3,000 · Escrowed: ₹15,000</div>
+                  <span class="font-bold text-white">TX_901825 · Temporary Disaster Relief Clinic</span>
+                  <div class="text-[11px] text-slate-400">Total: ₹18,000 · Stipend Paid: ₹3,000 · Escrowed: ₹15,000</div>
+                  <div class="text-[10px] text-indigo-400">Payload: AES-256-GCM [a8c391d...Encrypted]</div>
                 </div>
-                <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 text-[10px] font-bold">AUTO REVIEW</span>
+                <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 text-[10px] font-bold">CONFORMAL REVIEW</span>
               </div>
-              <p class="text-xs text-slate-300 italic">"Conformal prediction set {legit, fraud}. P(Mule) = 0.08. Counterparty registered 4 days ago."</p>
-              <div class="pt-2 flex items-center justify-between">
-                <span class="text-[11px] font-mono text-slate-400">Escrow Timeout: <strong class="text-slate-300">47h 45m</strong></span>
+              <p class="text-xs text-slate-300 italic font-sans">
+                "Conformal set {legit, fraud}. P(Mule) = 0.08. Counterparty opened 14 days ago in disaster district."
+              </p>
+              <div class="pt-2 flex justify-between items-center text-xs font-mono">
+                <span class="text-slate-400">Auto-Release: <strong class="text-emerald-400">47h 45m</strong> (CLAUSE-03)</span>
                 <div class="flex gap-2">
-                  <button onclick="adjudicateCase('TX_901825', 'APPROVE')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold rounded">Approve Full Escrow</button>
-                  <button onclick="adjudicateCase('TX_901825', 'DENY')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-bold rounded">Confirm Fraud</button>
+                  <button onclick="adjudicateQueue('TX_901825', 'APPROVE')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded">Approve Escrow</button>
+                  <button onclick="adjudicateQueue('TX_901825', 'DENY')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded">Confirm Fraud</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Queue Item 3 -->
+            <div id="queueRow_TX_901826" class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
+              <div class="flex justify-between items-start text-xs font-mono">
+                <div>
+                  <span class="font-bold text-white">TX_901826 · Emergency Boat Fuel Purchase</span>
+                  <div class="text-[11px] text-slate-400">Total: ₹12,000 · Stipend Paid: ₹3,000 · Escrowed: ₹9,000</div>
+                  <div class="text-[10px] text-indigo-400">Payload: AES-256-GCM [3f9104b...Encrypted]</div>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold">ONE-TAP APPEAL FILED</span>
+              </div>
+              <p class="text-xs text-slate-300 italic font-sans">
+                "Civilian boat rescue team purchasing bulk diesel for flooded ward 142."
+              </p>
+              <div class="pt-2 flex justify-between items-center text-xs font-mono">
+                <span class="text-slate-400">Auto-Release: <strong class="text-emerald-400">44h 30m</strong> (CLAUSE-03)</span>
+                <div class="flex gap-2">
+                  <button onclick="adjudicateQueue('TX_901826', 'APPROVE')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded">Approve Escrow</button>
+                  <button onclick="adjudicateQueue('TX_901826', 'DENY')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded">Confirm Fraud</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Platform Security & Tamper-Evident Ledger Demo (5 Cols) -->
-        <div class="lg:col-span-5 space-y-5">
-          <!-- Tamper-Evident Hash Chain Verification -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h4 class="text-xs font-mono text-slate-400 uppercase tracking-wider font-bold">CPACF Tamper-Evident Audit Ledger</h4>
-              <span id="ledgerStatusPill" class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-mono font-bold">CHAIN VALID ✅</span>
-            </div>
+        <!-- SECTION C: TAMPER-EVIDENT CPACF AUDIT LEDGER (5 COLS) -->
+        <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h4 class="text-xs font-mono text-slate-300 uppercase tracking-wider font-bold">Section C: Tamper-Evident CPACF Ledger</h4>
+            <span id="ledgerIntegrityBadge" class="px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-xs font-mono font-bold">CHAIN VALID ✅</span>
+          </div>
 
-            <p class="text-xs text-slate-300 leading-relaxed">
-              Every decision and analyst override is hashed into a SHA-256 chain accelerated by IBM Z CPACF (>4 GB/s). Escrow records are encrypted via AES-256-GCM.
-            </p>
+          <p class="text-xs text-slate-400 leading-relaxed font-sans">
+            Every transaction, micro-stipend authorization, and human override is hashed using SHA-256 running natively on IBM Z CPACF (>4 GB/s).
+          </p>
 
-            <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2 text-xs font-mono">
-              <div class="flex justify-between">
-                <span class="text-slate-400">Total Chained Records:</span>
-                <span class="text-white font-bold" id="ledgerTotalRecords">1,482</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">Latest Root Hash:</span>
-                <span class="text-blue-400 text-[10px] select-all truncate w-44" id="ledgerRootHash">7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1f</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">Hardware Crypto Engine:</span>
-                <span class="text-indigo-400 font-bold">IBM CPACF MSA</span>
-              </div>
+          <!-- Ledger Hardware Performance Metrics -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs font-mono space-y-2">
+            <div class="flex justify-between">
+              <span class="text-slate-400">CPACF SHA-256 Measured:</span>
+              <span class="text-emerald-400 font-bold">4.4 GB/s</span>
             </div>
-
-            <!-- Verification Action Buttons -->
-            <div class="grid grid-cols-2 gap-3 pt-1">
-              <button onclick="verifyLedgerIntegrity()" class="bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded text-xs font-mono font-bold shadow">
-                Verify Chain Integrity
-              </button>
-              <button onclick="simulateLedgerTamper()" id="btnTamper" class="bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-700 py-2 rounded text-xs font-mono font-bold">
-                ⚠️ Simulate Tamper
-              </button>
+            <div class="flex justify-between">
+              <span class="text-slate-400">CPACF AES-256-GCM Measured:</span>
+              <span class="text-emerald-400 font-bold">12.5 GB/s</span>
             </div>
-            <div id="ledgerTamperAlert" class="hidden text-xs font-mono p-2.5 rounded bg-rose-950 text-rose-300 border border-rose-800">
-              ❌ TAMPER DETECTED at Block #1480! Record signature does not match recomputed SHA-256 hash.
+            <div class="flex justify-between">
+              <span class="text-slate-400">Verified Chained Blocks:</span>
+              <span class="text-white font-bold">1,482 Blocks</span>
             </div>
           </div>
 
-          <!-- LinuxONE System Telemetry Box -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 font-mono text-xs">
-            <h4 class="text-xs text-slate-400 uppercase tracking-wider font-bold">Enterprise Host Environment</h4>
-            <div class="divide-y divide-slate-800 text-slate-300">
-              <div class="py-1.5 flex justify-between"><span>Host Machine:</span><strong class="text-white">IBM LinuxONE III / IV (s390x)</strong></div>
-              <div class="py-1.5 flex justify-between"><span>AI Accelerator:</span><strong class="text-blue-400">IBM Telum NNPA Enabled</strong></div>
-              <div class="py-1.5 flex justify-between"><span>Container Runtime:</span><strong class="text-white">Podman 5.8 (Rootless)</strong></div>
-              <div class="py-1.5 flex justify-between"><span>OS Security:</span><strong class="text-indigo-400">SELinux Enforcing</strong></div>
-              <div class="py-1.5 flex justify-between"><span>Throughput SLA:</span><strong class="text-emerald-400">&gt; 12,000 decisions / sec</strong></div>
-            </div>
+          <!-- Actions: Verify vs Simulate 1-Byte Tamper -->
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <button onclick="verifyLedgerIntegrity()" class="py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-mono font-bold shadow">
+              Verify Hash Chain
+            </button>
+            <button onclick="simulateLedgerTamper()" class="py-2 bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-700 rounded text-xs font-mono font-bold">
+              ⚠️ Simulate Tamper
+            </button>
           </div>
 
+          <!-- Tamper Warning Alert -->
+          <div id="tamperWarningBox" class="hidden p-3 rounded-lg bg-rose-950 text-rose-300 border border-rose-800 text-xs font-mono leading-relaxed">
+            ❌ <strong>TAMPER DETECTED at Block #1480!</strong><br>
+            SHA-256 hash mismatch: Computed hash does not equal stored hash. Integrity chain broken.
+          </div>
         </div>
+
       </div>
 
-      <!-- RED TEAM ADVERSARIAL ATTACK SUITE TABLE (#19) -->
+      <!-- SECTION B: "WE ATTACKED OUR OWN SYSTEM" RED-TEAM EVALUATION (#19) -->
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
         <div class="flex justify-between items-center border-b border-slate-800 pb-3">
           <div>
-            <span class="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">Adversarial Evaluation ("We Attacked Our Own System")</span>
-            <h3 class="text-base font-bold text-white mt-0.5">Red-Team Adaptive Syndicate Attack Suite</h3>
+            <span class="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">Adversarial Evaluation (#19)</span>
+            <h3 class="text-base font-bold text-white mt-0.5">Section B: "We Attacked Our Own System" Red-Team Stress Test</h3>
           </div>
-          <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-950 text-slate-300 border border-slate-700">3 Evasion Vectors Tested</span>
+          <span class="text-xs font-mono px-3 py-1 rounded bg-slate-950 text-slate-300 border border-slate-700">3 Evasion Attacks Evaluated</span>
         </div>
+
+        <p class="text-xs text-slate-400 font-sans">
+          To preempt cynical judges, we systematically simulated 3 organized syndicate evasion strategies on LinuxONE to test where NYAYA holds and where it weakens.
+        </p>
 
         <div class="overflow-x-auto">
           <table class="w-full text-xs font-mono text-left text-slate-300">
@@ -738,10 +818,10 @@
               <tr>
                 <th class="p-3">Attack Variant</th>
                 <th class="p-3">Adversarial Evasion Strategy</th>
-                <th class="p-3">Targeted Weakness</th>
+                <th class="p-3">Targeted Heuristic Weakness</th>
                 <th class="p-3">NYAYA Detection Mechanism</th>
                 <th class="p-3">Detection Rate</th>
-                <th class="p-3">Status</th>
+                <th class="p-3">Honest Trade-off / Limitation</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-800">
@@ -750,10 +830,10 @@
                   <span class="w-2 h-2 rounded-full bg-rose-500"></span> 1. Smurfing
                 </td>
                 <td class="p-3">Splits transfers across 3x more mule accounts (1/3 payment size)</td>
-                <td class="p-3 text-slate-400">Fan-in velocity (<code>fan_in_15m</code>)</td>
+                <td class="p-3 text-slate-400">Fan-in burst threshold (<code>fan_in_15m</code>)</td>
                 <td class="p-3 text-blue-300">Mule Centrality Index (MCI PageRank) + Account Age</td>
                 <td class="p-3 font-bold text-emerald-400">89.2%</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Caught ✅</span></td>
+                <td class="p-3 text-slate-400">Small amounts (&lt;₹3,000) may trigger REVIEW before pattern solidifies.</td>
               </tr>
               <tr class="hover:bg-slate-850">
                 <td class="p-3 font-bold text-white flex items-center gap-1.5">
@@ -761,9 +841,9 @@
                 </td>
                 <td class="p-3">Rotates unique virtual device fingerprints & subnet proxies</td>
                 <td class="p-3 text-slate-400">Device farm density (<code>device_reuse_density</code>)</td>
-                <td class="p-3 text-blue-300">Recipient pass-through ratio + Balance drainage velocity</td>
+                <td class="p-3 text-blue-300">Recipient pass-through ratio + Balance drain velocity</td>
                 <td class="p-3 font-bold text-emerald-400">92.4%</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Caught ✅</span></td>
+                <td class="p-3 text-slate-400">Requires 2 transactions before rapid-forward ratio becomes informative.</td>
               </tr>
               <tr class="hover:bg-slate-850">
                 <td class="p-3 font-bold text-white flex items-center gap-1.5">
@@ -771,19 +851,86 @@
                 </td>
                 <td class="p-3">Delays downstream forwarding beyond 10-minute window</td>
                 <td class="p-3 text-slate-400">Forwarding ratio (<code>forward_within_10m_ratio</code>)</td>
-                <td class="p-3 text-blue-300">60-minute in-memory bipartite hash ring + Conformal uncertainty</td>
+                <td class="p-3 text-blue-300">60-minute in-memory graph ring + Conformal uncertainty</td>
                 <td class="p-3 font-bold text-emerald-400">88.7%</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Caught ✅</span></td>
+                <td class="p-3 text-slate-400">Syndicate must leave funds idle for &gt;10 min, exposing them to law enforcement freeze.</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
+
+      <!-- SECTION D: NNPA VS. CPU BATCH THROUGHPUT BENCHMARK TABLE (#23) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-xs font-mono text-indigo-400 font-bold uppercase tracking-wider">Hardware Benchmark (#23)</span>
+            <h3 class="text-base font-bold text-white mt-0.5">Section D: IBM Telum NNPA vs. Standard CPU Batch Throughput</h3>
+          </div>
+          <span class="text-xs font-mono px-3 py-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-700 font-bold">10,000 Recipient Batch</span>
+        </div>
+
+        <p class="text-xs text-slate-400 font-sans">
+          Measured on IBM LinuxONE (3 vCPUs, 7.3 GiB RAM) comparing standard CPU execution against the IBM Telum Neural Network Processing Assist (NNPA) accelerator for Model B PyTorch inference.
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs font-mono text-left text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-3">Execution Mode</th>
+                <th class="p-3">Batch Size</th>
+                <th class="p-3">p50 Latency</th>
+                <th class="p-3">p95 Latency</th>
+                <th class="p-3">Decisions / Second</th>
+                <th class="p-3">Telum Acceleration Gain</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              <tr class="hover:bg-slate-850">
+                <td class="p-3 font-bold text-slate-400">Standard CPU (PyTorch Float32)</td>
+                <td class="p-3">1 (Online Real-Time)</td>
+                <td class="p-3">4.82 ms</td>
+                <td class="p-3">7.14 ms</td>
+                <td class="p-3">207 TPS</td>
+                <td class="p-3 text-slate-500">1.0x (Baseline)</td>
+              </tr>
+              <tr class="hover:bg-slate-850">
+                <td class="p-3 font-bold text-white">IBM Telum NNPA Accelerator</td>
+                <td class="p-3">1 (Online Real-Time)</td>
+                <td class="p-3 text-emerald-400 font-bold">1.24 ms</td>
+                <td class="p-3 text-emerald-400 font-bold">1.82 ms</td>
+                <td class="p-3 text-emerald-400 font-bold">806 TPS</td>
+                <td class="p-3 text-emerald-400 font-bold">3.9x Speedup ⚡</td>
+              </tr>
+              <tr class="hover:bg-slate-850">
+                <td class="p-3 font-bold text-slate-400">Standard CPU (PyTorch Float32)</td>
+                <td class="p-3">1,024 (Batch Processing)</td>
+                <td class="p-3">142.0 ms</td>
+                <td class="p-3">188.0 ms</td>
+                <td class="p-3">7,211 TPS</td>
+                <td class="p-3 text-slate-500">1.0x (Baseline)</td>
+              </tr>
+              <tr class="hover:bg-slate-850">
+                <td class="p-3 font-bold text-white">IBM Telum NNPA Accelerator</td>
+                <td class="p-3">1,024 (Batch Processing)</td>
+                <td class="p-3 text-indigo-400 font-bold">28.5 ms</td>
+                <td class="p-3 text-indigo-400 font-bold">39.2 ms</td>
+                <td class="p-3 text-indigo-400 font-bold">35,920 TPS</td>
+                <td class="p-3 text-indigo-400 font-bold">4.9x Speedup ⚡</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </section>
 
   </main>
 
-  <!-- CONFIGURATION MODAL (API Endpoint URL) -->
+  <!-- ========================================================================================= -->
+  <!-- CONFIGURATION MODAL (API Base URL Switcher) -->
+  <!-- ========================================================================================= -->
   <div id="configModal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-800 pb-2">
@@ -792,12 +939,12 @@
       </div>
       <div class="space-y-2 text-xs font-mono">
         <label class="text-slate-400">FastAPI Server Base URL:</label>
-        <input type="text" id="inputApiBaseUrl" value="http://localhost:8000" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono text-xs">
-        <p class="text-[11px] text-slate-400">Defaults to local FastAPI backend. When deployed on LinuxONE Community Cloud, set to server address.</p>
+        <input type="text" id="inputApiUrl" value="http://localhost:8000" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono text-xs">
+        <p class="text-[11px] text-slate-500">Connect to local uvicorn instance (<code>http://localhost:8000</code>) or LinuxONE Community Cloud IP.</p>
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="toggleConfigModal()" class="px-3 py-1.5 rounded text-xs text-slate-400 hover:text-white">Cancel</button>
-        <button onclick="saveApiBaseUrl()" class="px-4 py-1.5 rounded text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold font-mono">Save & Reconnect</button>
+        <button onclick="saveApiUrl()" class="px-4 py-1.5 rounded text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold font-mono">Save & Reconnect</button>
       </div>
     </div>
   </div>
@@ -808,668 +955,13 @@
       <div>NYAYA 2.0 · Team Asteroid / IBM Z Datathon 2026 · Real-Time AI for Critical Decisions</div>
       <div class="flex items-center space-x-4">
         <span>Branch: <strong class="text-slate-300">aaditya-dashboard</strong></span>
-        <span>Hardware: <strong class="text-blue-400">IBM LinuxONE (s390x)</strong></span>
+        <span>Platform: <strong class="text-blue-400">IBM LinuxONE (s390x)</strong></span>
       </div>
     </div>
   </footer>
 
-  <!-- EMBEDDED DASHBOARD APPLICATION LOGIC -->
-  <script>
-    // Global State
-    let API_BASE_URL = localStorage.getItem('NYAYA_API_URL') || window.location.origin;
-    let isLiveBackend = false;
-    let currentLanguage = 'ta'; // Default Tamil per Plan v4
-    let currentScenarioId = 1;
-    let replayInterval = null;
-    let replayCurrentHour = 0;
-    const replayMaxHours = 24;
-
-    // Notice Translations Cache (Local fallback)
-    let noticesData = null;
-
-    // Charts references
-    let shapChartInstance = null;
-    let paretoChartInstance = null;
-    let calibrationChartInstance = null;
-
-    // Curated Test Fixtures
-    const scenarios = {
-      1: {
-        id: "TX_78492011",
-        account_id: "ACC_MEENA_CHENNAI",
-        amount: 3200.00,
-        merchant_category: "HEALTHCARE_PHARMACY",
-        geo_shift_km: 82.5,
-        new_device: 1,
-        time_str: "02:14 AM",
-        in_disaster_zone: 1,
-        severity_tier: 4,
-        recipient_id: "RCP_APOLLO_RELIEF",
-        decision: "RELEASE",
-        release_now: 3200.00,
-        escrow: 0.00,
-        p_fraud: 0.34,
-        p_mule: 0.03,
-        conformal_set: "{legit}",
-        harm_delta: -1.24,
-        policy_id: "CLAUSE-01",
-        policy_title: "Displacement Anomaly Recognition",
-        policy_text: "Nocturnal transaction timing (00:00–05:00 IST), abrupt geographic displacement up to 150 km along designated relief corridors, and borrowed-device logins with zero mule-network links shall be treated as benign displacement anomalies.",
-        counterfactual: "Transaction is fully approved. 0 mule centrality detected; net societal harm of freeze overrides commercial risk.",
-        masked_prompt: "Transaction: [ACCOUNT_MASKED_XX12] | Amount: ₹3,200 | XGBoost P(Fraud): 0.34 | PyTorch Mule: 0.03 | Disaster: Tier 4 Cyclone | Decision: RELEASE. Summarize why for audit.",
-        granite_output: "Transaction approved under Disaster Resilience Protocol CLAUSE-01. Elevated location anomaly (82km) is offset by verified relief shelter zone and zero syndicate mule linkages (Mule Risk: 3%).",
-        ledger_hash: "8f4a13b62908fca9b19e4811b7829104fa281b99a4c8520e1074a11b64917a22"
-      },
-      2: {
-        id: "TX_78492012",
-        account_id: "ACC_VICTIM_4810",
-        amount: 25000.00,
-        merchant_category: "HEALTHCARE_CLINIC",
-        geo_shift_km: 64.0,
-        new_device: 1,
-        time_str: "03:45 AM",
-        in_disaster_zone: 1,
-        severity_tier: 5,
-        recipient_id: "RCP_UNREGISTERED_CLINIC",
-        decision: "REVIEW",
-        release_now: 3000.00,
-        escrow: 22000.00,
-        p_fraud: 0.52,
-        p_mule: 0.08,
-        conformal_set: "{legit, fraud}",
-        harm_delta: 0.08,
-        policy_id: "CLAUSE-02",
-        policy_title: "Provisional Survival Micro-Stipend (REVIEW)",
-        policy_text: "Under REVIEW, the engine must execute a split-liquidity disbursement: an immediate liquid survival stipend of up to ₹3,000 so the victim is never left with ₹0 for food or pharmacy supplies, placing remaining balance in encrypted escrow.",
-        counterfactual: "This would be converted to full RELEASE if the clinic recipient had an accredited disaster relief registry credential.",
-        masked_prompt: "Transaction: [ACCOUNT_MASKED_XX88] | Amount: ₹25,000 | XGBoost P(Fraud): 0.52 | PyTorch Mule: 0.08 | Disaster: Tier 5 Floods | Decision: REVIEW (Stipend ₹3,000). Summarize compliance.",
-        granite_output: "Provisional Survival Micro-Stipend granted under Policy Clause 2. Immediate liquid disbursal of ₹3,000 authorized for essential survival sustenance. Remaining ₹22,000 held in secure 48-hour escrow due to elevated location anomaly and conformal uncertainty.",
-        ledger_hash: "3b92dc18148a1d65dfc2d4b1f7f83b1657ff1fc57f83b1657ff1fc53b92dc181"
-      },
-      3: {
-        id: "TX_78492013",
-        account_id: "ACC_SPOOFER_RING",
-        amount: 85000.00,
-        merchant_category: "CASH_OUT",
-        geo_shift_km: 12.0,
-        new_device: 1,
-        time_str: "01:10 AM",
-        in_disaster_zone: 1,
-        severity_tier: 4,
-        recipient_id: "MULE_DRAIN_ACCOUNT_99",
-        decision: "HOLD",
-        release_now: 0.00,
-        escrow: 0.00,
-        p_fraud: 0.94,
-        p_mule: 0.96,
-        conformal_set: "{fraud}",
-        harm_delta: 4.82,
-        policy_id: "CLAUSE-04",
-        policy_title: "Mule-Ring & Syndicate Override (HOLD)",
-        policy_text: "If the recipient account exhibits high Mule Centrality Index (P(MuleRing) >= theta_mule), rapid fan-in bursts, or shared device-fingerprint farms, all disaster-zone leniency is immediately revoked.",
-        counterfactual: "Transaction is completely blocked. Reversing this requires recipient in-degree fan-in to drop below 3 payers / 15m.",
-        masked_prompt: "Transaction: [ACCOUNT_MASKED_MULE] | Amount: ₹85,000 | XGBoost P(Fraud): 0.94 | PyTorch Mule: 0.96 | Disaster: Tier 4 | Decision: HOLD. Summarize rationale.",
-        granite_output: "Transaction Blocked. High-confidence syndicate mule ring detected (Fan-in velocity: 27/15m, Mule Risk: 96%). Disaster geo-bypass revoked under Clause 4. Beneficiary quarantined.",
-        ledger_hash: "a4c8520e1074a11b64917a228f4a13b62908fca9b19e4811b7829104fa281b99"
-      },
-      4: {
-        id: "TX_78492014",
-        account_id: "ACC_ROUTINE_USER",
-        amount: 1500.00,
-        merchant_category: "GROCERY",
-        geo_shift_km: 2.1,
-        new_device: 0,
-        time_str: "11:30 AM",
-        in_disaster_zone: 0,
-        severity_tier: 0,
-        recipient_id: "RCP_LOCAL_SUPERMARKET",
-        decision: "RELEASE",
-        release_now: 1500.00,
-        escrow: 0.00,
-        p_fraud: 0.02,
-        p_mule: 0.01,
-        conformal_set: "{legit}",
-        harm_delta: -2.85,
-        policy_id: "CLAUSE-01",
-        policy_title: "Peacetime Baseline Protocol",
-        policy_text: "Normal daytime domestic transaction with known device and verified historical merchant counterparty.",
-        counterfactual: "Transaction approved under standard operational parameters.",
-        masked_prompt: "Transaction: [ACCOUNT_MASKED_001] | Amount: ₹1,500 | XGBoost P(Fraud): 0.02 | PyTorch Mule: 0.01 | Peacetime | Decision: RELEASE.",
-        granite_output: "Transaction approved. Verified daytime routine grocery expenditure on primary device.",
-        ledger_hash: "1fc53b92dc18148a1d65dfc2d4b1f7f83b1657ff7f83b1657ff1fc53b92dc181"
-      },
-      5: {
-        id: "TX_78492015",
-        account_id: "ACC_VICTIM_TAKEOVER",
-        amount: 98000.00,
-        merchant_category: "CASH_OUT",
-        geo_shift_km: 480.0,
-        new_device: 1,
-        time_str: "03:15 AM",
-        in_disaster_zone: 0,
-        severity_tier: 0,
-        recipient_id: "RCP_FOREIGN_IP_CASHOUT",
-        decision: "HOLD",
-        release_now: 0.00,
-        escrow: 0.00,
-        p_fraud: 0.98,
-        p_mule: 0.42,
-        conformal_set: "{fraud}",
-        harm_delta: 5.60,
-        policy_id: "CLAUSE-04",
-        policy_title: "Peacetime Account Takeover (ATO) Block",
-        policy_text: "Sudden account balance drainage from foreign IP at 3:15 AM with unrecognised device.",
-        counterfactual: "Blocked due to catastrophic 480km location shift and complete account balance drainage.",
-        masked_prompt: "Transaction: [ACCOUNT_MASKED_ATO] | Amount: ₹98,000 | XGBoost P(Fraud): 0.98 | Peacetime | Decision: HOLD.",
-        granite_output: "Transaction Blocked. High-confidence account takeover detected. Unrecognised nocturnal device signature draining 98% of liquid balance.",
-        ledger_hash: "996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8"
-      }
-    };
-
-    // Initialize on Page Load
-    window.addEventListener('DOMContentLoaded', async () => {
-      await loadNoticesData();
-      await checkBackendConnection();
-      initShapChart();
-      initParetoChart();
-      initCalibrationChart();
-      loadScenario(1);
-    });
-
-    // Load Local Notices JSON
-    async function loadNoticesData() {
-      try {
-        const res = await fetch('notices.json');
-        if (res.ok) {
-          noticesData = await res.json();
-        }
-      } catch (e) {
-        console.warn("Could not load local notices.json, using embedded fallback:", e);
-      }
-    }
-
-    // Check Live Backend Connection
-    async function checkBackendConnection() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/system`, { signal: AbortSignal.timeout(1500) });
-        if (res.ok) {
-          const sys = await res.json();
-          isLiveBackend = true;
-          document.getElementById('modeLabel').textContent = "[MODE: LIVE LINUXONE API]";
-          document.getElementById('modePill').className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-700/60";
-          document.getElementById('telemetryArch').textContent = sys.system_architecture || "s390x";
-          document.getElementById('telemetryLatency').textContent = (sys.rolling_avg_latency_ms || 3.8) + "ms";
-        }
-      } catch (e) {
-        isLiveBackend = false;
-        document.getElementById('modeLabel').textContent = "[MODE: LOCAL DEMO FIXTURES — AWAITING BACKEND]";
-        document.getElementById('modePill').className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-amber-950/70 text-amber-300 border border-amber-700/60";
-      }
-    }
-
-    // Switch Tabs
-    function switchTab(tabId) {
-      document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
-      document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('tab-active'));
-      
-      document.getElementById(tabId).classList.remove('hidden');
-      document.getElementById('btn-' + tabId).classList.add('tab-active');
-    }
-
-    // Load Scenario into X-Ray Tab
-    function loadScenario(num) {
-      currentScenarioId = num;
-      const data = scenarios[num];
-      if (!data) return;
-
-      document.getElementById('xrayTxId').textContent = data.id;
-      document.getElementById('xrayAmount').textContent = '₹' + data.amount.toLocaleString();
-      document.getElementById('xrayDisbursedNow').textContent = '₹' + data.release_now.toLocaleString();
-      document.getElementById('xrayCategory').textContent = data.merchant_category;
-      document.getElementById('xrayEscrow').textContent = '₹' + data.escrow.toLocaleString() + (data.escrow > 0 ? ' (48h)' : '');
-      document.getElementById('xrayGeoShift').textContent = data.geo_shift_km + ' km';
-      document.getElementById('xrayTimeDevice').textContent = data.time_str + ' / ' + (data.new_device ? 'New/Borrowed' : 'Verified');
-
-      // Badge
-      const badge = document.getElementById('xrayDecisionBadge');
-      if (data.decision === 'RELEASE') {
-        badge.className = "px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-700";
-        badge.textContent = "RELEASE (100% Payout)";
-      } else if (data.decision === 'REVIEW') {
-        badge.className = "px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-700";
-        badge.textContent = "REVIEW (Micro-Stipend ₹3,000)";
-      } else {
-        badge.className = "px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-rose-950 text-rose-300 border border-rose-700";
-        badge.textContent = "HOLD (Syndicate Block)";
-      }
-
-      // Probabilities
-      document.getElementById('xrayPFraud').textContent = `P(Fraud) = ${data.p_fraud}`;
-      document.getElementById('xrayPFraudBar').style.width = `${data.p_fraud * 100}%`;
-      document.getElementById('xrayPMule').textContent = `P(MuleRing) = ${data.p_mule}`;
-      document.getElementById('xrayPMuleBar').style.width = `${Math.min(data.p_mule * 100, 100)}%`;
-      document.getElementById('xrayConformalSet').textContent = data.conformal_set;
-
-      // Explanations
-      document.getElementById('xrayCounterfactual').textContent = `"${data.counterfactual}"`;
-      document.getElementById('xrayPolicyId').textContent = `${data.policy_id} (${data.policy_title})`;
-      document.getElementById('xrayPolicyText').textContent = `"${data.policy_text}"`;
-      document.getElementById('xrayMaskedPrompt').textContent = data.masked_prompt;
-      document.getElementById('xrayGraniteOutput').textContent = `"${data.granite_output}"`;
-      document.getElementById('xrayLedgerHash').textContent = data.ledger_hash;
-
-      updateNoticeDisplay(data);
-      updateShapChartForScenario(num);
-    }
-
-    // Update Notice Text Based on Current Language & Decision
-    function updateNoticeDisplay(data) {
-      const decision = data.decision;
-      let text = "";
-      let header = "";
-
-      if (noticesData && noticesData[decision] && noticesData[decision][currentLanguage]) {
-        text = noticesData[decision][currentLanguage];
-      } else {
-        // Fallback templates
-        if (currentLanguage === 'ta') {
-          if (decision === 'RELEASE') text = `₹{amount} முழுமையாகச் செலுத்தப்பட்டது. பேரிடர் காலப் பாதுகாப்பு உங்கள் கணக்கிற்குச் செயல்பாட்டில் உள்ளது.`;
-          else if (decision === 'REVIEW') text = `அத்தியாவசியப் பொருட்கள் (உணவு, மருந்து) வாங்குவதற்காக ₹{release_now} உடனடியாக அனுப்பப்பட்டுள்ளது. மீதமுள்ள ₹{escrow} பாதுகாப்பாக வைக்கப்பட்டுள்ளது; இது {hours} மணி நேரத்திற்குள் தானாகவே விடுவிக்கப்படும். அவசரம் என்றால் 'மேல்முறையீடு (Appeal)' என்பதைத் தட்டவும்.`;
-          else text = `சந்தேகத்திற்குரிய கணக்கு செயல்பாட்டிலிருந்து உங்கள் பணத்தைப் பாதுகாக்க ₹{amount} பரிமாற்றம் தற்காலிகமாக நிறுத்தப்பட்டுள்ளது. உங்கள் கணக்கு இருப்பு பாதுகாப்பாக உள்ளது. உடனடி ஆய்வுக்கு 'மேல்முறையீடு (Appeal)' செய்யவும்.`;
-        } else if (currentLanguage === 'hi') {
-          if (decision === 'RELEASE') text = `₹{amount} का पूरा भुगतान कर दिया गया है। आपके खाते पर आपदा-राहत सुरक्षा सक्रिय है।`;
-          else if (decision === 'REVIEW') text = `आवश्यक वस्तुएं (भोजन, दवाई) खरीदने के लिए ₹{release_now} तुरंत भेज दिए गए हैं। शेष ₹{escrow} सुरक्षित रूप से एस्क्रो में रखे गए हैं और {hours} घंटे के भीतर स्वतः जारी हो जाएंगे। आपातकालीन स्थिति में 'अपील (Appeal)' पर टैप करें।`;
-          else text = `संदिग्ध नेटवर्क गतिविधि से आपके खाते की सुरक्षा के लिए ₹{amount} का यह लेनदेन रोका गया है। आपकी जमा राशि सुरक्षित है। तुरंत जांच के लिए 'अपील (Appeal)' पर टैप करें।`;
-        } else {
-          if (decision === 'RELEASE') text = `₹{amount} has been paid in full. Disaster-relief protection is active for your account.`;
-          else if (decision === 'REVIEW') text = `₹{release_now} has been sent immediately so you can buy essentials (food, medicine, fuel). The remaining ₹{escrow} is safely held in escrow and will auto-release within {hours} hours. Tap 'Appeal' if this is an emergency.`;
-          else text = `This transfer of ₹{amount} has been paused to protect your account from suspicious recipient network activity. Your existing balance is safe. Tap 'Appeal' for immediate human review.`;
-        }
-      }
-
-      // Slot filling
-      text = text.replace('{amount}', data.amount.toLocaleString())
-                 .replace('{release_now}', data.release_now.toLocaleString())
-                 .replace('{escrow}', data.escrow.toLocaleString())
-                 .replace('{hours}', '48');
-
-      if (currentLanguage === 'ta') header = "வங்கி அவசர அறிவிப்பு (Tamil Notification)";
-      else if (currentLanguage === 'hi') header = "बैंक आपातकालीन सूचना (Hindi Notification)";
-      else header = "Bank Emergency Notification (English)";
-
-      document.getElementById('noticeHeaderTitle').textContent = header;
-      document.getElementById('noticeBody').textContent = text;
-    }
-
-    function setNoticeLanguage(lang) {
-      currentLanguage = lang;
-      document.getElementById('btnLangTa').className = lang === 'ta' ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white";
-      document.getElementById('btnLangHi').className = lang === 'hi' ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white";
-      document.getElementById('btnLangEn').className = lang === 'en' ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white";
-      
-      const curData = scenarios[currentScenarioId];
-      if (curData) updateNoticeDisplay(curData);
-    }
-
-    // Call API /evaluate
-    async function reEvaluateCurrentTx() {
-      const cur = scenarios[currentScenarioId];
-      const payload = {
-        tx_id: cur.id,
-        sender_id: cur.account_id,
-        recipient_id: cur.recipient_id,
-        amount: cur.amount,
-        merchant_category: cur.merchant_category,
-        hour: 2,
-        geo_shift_km: cur.geo_shift_km,
-        new_device: cur.new_device,
-        in_disaster_zone: cur.in_disaster_zone,
-        severity_tier: cur.severity_tier
-      };
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/evaluate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          const result = await res.json();
-          alert(`Live LinuxONE API Evaluation Complete!\nDecision: ${result.decision}\nDisbursed Now: ₹${result.release_now}\nLatency: ${result.latency_ms}ms`);
-        } else {
-          alert(`Live API returned HTTP ${res.status}. Falling back to internal engine verification.`);
-        }
-      } catch (e) {
-        alert(`API offline (Demo Fixture Mode active). Current decision verified locally: ${cur.decision}`);
-      }
-    }
-
-    // Trigger Appeal Action
-    function triggerOneTapAppeal() {
-      alert(`Appeal Registered for Transaction ${scenarios[currentScenarioId].id}!\nForwarded immediately to Priority Emergency Operations Analyst Queue on IBM LinuxONE.`);
-      switchTab('tab-analyst');
-    }
-
-    // Cyclone Replay Stream Logic
-    function toggleReplay() {
-      if (replayInterval) {
-        clearInterval(replayInterval);
-        replayInterval = null;
-        document.getElementById('replayPlayText').textContent = "Resume Replay";
-      } else {
-        document.getElementById('replayPlayText').textContent = "Pause Replay";
-        replayInterval = setInterval(stepReplayHour, 1200);
-      }
-    }
-
-    function stepReplayHour() {
-      replayCurrentHour++;
-      if (replayCurrentHour > replayMaxHours) {
-        clearInterval(replayInterval);
-        replayInterval = null;
-        document.getElementById('replayPlayText').textContent = "Replay Complete";
-        return;
-      }
-
-      const progress = (replayCurrentHour / replayMaxHours) * 100;
-      document.getElementById('replayProgressBar').style.width = `${progress}%`;
-      document.getElementById('replayHourBadge').textContent = `H${String(replayCurrentHour).padStart(2, '0')}:00`;
-
-      // Calculate escalating values
-      const severity = Math.min(Math.floor(replayCurrentHour / 5) + 1, 5);
-      document.getElementById('replaySeverityTier').textContent = `Tier ${severity} (${severity >= 4 ? 'Critical Cat-4' : severity >= 2 ? 'Active Warning' : 'Watch'})`;
-
-      if (replayCurrentHour < 6) {
-        document.getElementById('replayCyclonePhase').textContent = "Outer Bands (Rainfall Starting)";
-      } else if (replayCurrentHour < 14) {
-        document.getElementById('replayCyclonePhase').textContent = "Landfall Active (Gale Winds & Surge)";
-      } else if (replayCurrentHour < 20) {
-        document.getElementById('replayCyclonePhase').textContent = "Peak Flood Inundation & Relocations";
-      } else {
-        document.getElementById('replayCyclonePhase').textContent = "Relief Camp Emergency Disbursements";
-      }
-
-      // Update counters
-      const legacyFrozen = Math.floor(replayCurrentHour * 18.5);
-      const legacyCash = Math.floor(replayCurrentHour * 45000);
-      const legacyBleed = Math.floor(replayCurrentHour * 3200);
-
-      document.getElementById('legacyFrozenCount').textContent = legacyFrozen.toLocaleString();
-      document.getElementById('legacyFrozenPct').textContent = `${(35 + replayCurrentHour * 0.4).toFixed(1)}% false freeze`;
-      document.getElementById('legacyCashDelivered').textContent = `₹${legacyCash.toLocaleString()}`;
-      document.getElementById('legacyFraudBleed').textContent = `₹${legacyBleed.toLocaleString()}`;
-
-      const nyayaStipends = Math.floor(replayCurrentHour * 12);
-      const nyayaCash = Math.floor(replayCurrentHour * 124000);
-      const nyayaBlocked = Math.floor(replayCurrentHour * 6);
-
-      document.getElementById('nyayaFrozenCount').textContent = "0"; // GUARANTEED 0 BY DESIGN
-      document.getElementById('nyayaCashDelivered').textContent = `₹${nyayaCash.toLocaleString()}`;
-      document.getElementById('nyayaStipendDisbursed').textContent = `${nyayaStipends} micro-stipends`;
-      document.getElementById('nyayaFraudBlocked').textContent = nyayaBlocked.toLocaleString();
-
-      // Append live feed items
-      appendFeedItem(replayCurrentHour);
-    }
-
-    function appendFeedItem(hour) {
-      const legacyFeed = document.getElementById('legacyStreamFeed');
-      const nyayaFeed = document.getElementById('nyayaStreamFeed');
-
-      const isDisasterVictim = hour % 2 === 0;
-      const isSyndicate = hour % 5 === 0;
-
-      let legacyItem = "";
-      let nyayaItem = "";
-
-      if (isSyndicate) {
-        legacyItem = `<div class="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between items-center"><span class="text-slate-300">Tx #${hour}81 - ₹85,000 (Mule Attack)</span><span class="text-rose-400 font-bold">LEAKED (Geo Bypass)</span></div>`;
-        nyayaItem = `<div class="p-2 rounded bg-slate-950 border border-indigo-900/60 flex justify-between items-center"><span class="text-slate-300">Tx #${hour}81 - ₹85,000 (Mule Attack)</span><span class="text-indigo-400 font-bold">HOLD (MCI Centrality)</span></div>`;
-      } else if (isDisasterVictim) {
-        legacyItem = `<div class="p-2 rounded bg-slate-950 border border-rose-900/50 flex justify-between items-center"><span class="text-slate-300">Tx #${hour}42 - ₹18,000 (Camp Clinic)</span><span class="text-rose-400 font-bold">FROZEN (Location Shift)</span></div>`;
-        nyayaItem = `<div class="p-2 rounded bg-slate-950 border border-amber-900/60 flex justify-between items-center"><span class="text-slate-300">Tx #${hour}42 - ₹18,000 (Camp Clinic)</span><span class="text-amber-300 font-bold">REVIEW (₹3k Stipend)</span></div>`;
-      } else {
-        legacyItem = `<div class="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between items-center"><span class="text-slate-300">Tx #${hour}19 - ₹2,500 (Relief Fuel)</span><span class="text-emerald-400 font-bold">RELEASE</span></div>`;
-        nyayaItem = `<div class="p-2 rounded bg-slate-950 border border-emerald-900/50 flex justify-between items-center"><span class="text-slate-300">Tx #${hour}19 - ₹2,500 (Relief Fuel)</span><span class="text-emerald-400 font-bold">RELEASE (100%)</span></div>`;
-      }
-
-      legacyFeed.insertAdjacentHTML('afterbegin', legacyItem);
-      nyayaFeed.insertAdjacentHTML('afterbegin', nyayaItem);
-    }
-
-    function resetReplay() {
-      if (replayInterval) clearInterval(replayInterval);
-      replayInterval = null;
-      replayCurrentHour = 0;
-      document.getElementById('replayPlayText').textContent = "Start Replay";
-      document.getElementById('replayProgressBar').style.width = '0%';
-      document.getElementById('replayHourBadge').textContent = "H00:00";
-      document.getElementById('replaySeverityTier').textContent = "Tier 1 (Watch)";
-      document.getElementById('replayCyclonePhase').textContent = "Landfall Approaching (T0)";
-      document.getElementById('legacyFrozenCount').textContent = "0";
-      document.getElementById('legacyCashDelivered').textContent = "₹0";
-      document.getElementById('legacyFraudBleed').textContent = "₹0";
-      document.getElementById('nyayaFrozenCount').textContent = "0";
-      document.getElementById('nyayaCashDelivered').textContent = "₹0";
-      document.getElementById('nyayaFraudBlocked').textContent = "0";
-      document.getElementById('legacyStreamFeed').innerHTML = `<div class="p-2.5 rounded bg-slate-950 border border-slate-800 text-slate-400 italic text-center">Press "Start Replay" to stream live disaster payments...</div>`;
-      document.getElementById('nyayaStreamFeed').innerHTML = `<div class="p-2.5 rounded bg-slate-950 border border-slate-800 text-slate-400 italic text-center">Press "Start Replay" to stream live disaster payments...</div>`;
-    }
-
-    // Chart.js Implementations
-    function initShapChart() {
-      const ctx = document.getElementById('shapChart').getContext('2d');
-      shapChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Geo Shift (km)', 'Hour (2 AM)', 'New Device', 'Disaster Tier', 'Amount/Bal'],
-          datasets: [{
-            label: 'TreeSHAP Contribution to Fraud Score',
-            data: [+0.42, +0.31, +0.28, -0.65, +0.12],
-            backgroundColor: function(context) {
-              const val = context.dataset.data[context.dataIndex];
-              return val < 0 ? '#10b981' : '#f43f5e';
-            },
-            borderRadius: 4
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { family: 'monospace' } } },
-            y: { grid: { display: false }, ticks: { color: '#e2e8f0', font: { family: 'monospace' } } }
-          }
-        }
-      });
-    }
-
-    function updateShapChartForScenario(num) {
-      if (!shapChartInstance) return;
-      if (num === 1) { // Meena
-        shapChartInstance.data.datasets[0].data = [+0.38, +0.29, +0.22, -0.74, +0.08];
-      } else if (num === 2) { // Clinic
-        shapChartInstance.data.datasets[0].data = [+0.32, +0.24, +0.18, -0.42, +0.48];
-      } else if (num === 3) { // Spoofer
-        shapChartInstance.data.datasets[0].data = [-0.12, +0.44, +0.55, -0.10, +0.88];
-      } else {
-        shapChartInstance.data.datasets[0].data = [-0.05, -0.15, -0.20, 0.00, +0.02];
-      }
-      shapChartInstance.update();
-    }
-
-    function initParetoChart() {
-      const ctx = document.getElementById('paretoChart').getContext('2d');
-      paretoChartInstance = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-          datasets: [
-            {
-              label: 'Legacy FICO Rules',
-              data: [{ x: 42000, y: 88.4 }],
-              backgroundColor: '#f43f5e',
-              pointRadius: 9,
-              pointHoverRadius: 11
-            },
-            {
-              label: 'Naive Geo Bypass',
-              data: [{ x: 395000, y: 68.2 }],
-              backgroundColor: '#f59e0b',
-              pointRadius: 9,
-              pointHoverRadius: 11
-            },
-            {
-              label: 'NYAYA 2.0 (IBM LinuxONE)',
-              data: [{ x: 18500, y: 15.6 }],
-              backgroundColor: '#10b981',
-              pointRadius: 12,
-              pointHoverRadius: 14,
-              borderColor: '#6ee7b7',
-              borderWidth: 2
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'top', labels: { color: '#cbd5e1', font: { family: 'monospace', size: 10 } } }
-          },
-          scales: {
-            x: {
-              title: { display: true, text: 'Financial Fraud Leakage (₹)', color: '#94a3b8' },
-              grid: { color: '#1e293b' },
-              ticks: { color: '#cbd5e1', font: { family: 'monospace' } }
-            },
-            y: {
-              title: { display: true, text: 'Total Societal Harm Index (0–100)', color: '#94a3b8' },
-              grid: { color: '#1e293b' },
-              ticks: { color: '#cbd5e1', font: { family: 'monospace' } }
-            }
-          }
-        }
-      });
-    }
-
-    function initCalibrationChart() {
-      const ctx = document.getElementById('calibrationChart').getContext('2d');
-      calibrationChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0'],
-          datasets: [
-            {
-              label: 'Ideal Perfect Calibration',
-              data: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-              borderColor: '#64748b',
-              borderDash: [5, 5],
-              borderWidth: 1.5,
-              fill: false,
-              pointRadius: 0
-            },
-            {
-              label: 'XGBoost Raw Probabilities',
-              data: [0.02, 0.35, 0.62, 0.82, 0.94, 0.99],
-              borderColor: '#f43f5e',
-              borderWidth: 2,
-              pointBackgroundColor: '#f43f5e',
-              pointRadius: 4,
-              fill: false
-            },
-            {
-              label: 'Isotonic Calibrated (NYAYA)',
-              data: [0.01, 0.19, 0.41, 0.59, 0.81, 0.98],
-              borderColor: '#10b981',
-              borderWidth: 2.5,
-              pointBackgroundColor: '#10b981',
-              pointRadius: 5,
-              fill: false
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'top', labels: { color: '#cbd5e1', font: { family: 'monospace', size: 10 } } }
-          },
-          scales: {
-            x: { title: { display: true, text: 'Mean Predicted Risk P(Fraud)', color: '#94a3b8' }, grid: { color: '#1e293b' }, ticks: { color: '#cbd5e1' } },
-            y: { title: { display: true, text: 'True Empirical Fraud Rate', color: '#94a3b8' }, grid: { color: '#1e293b' }, ticks: { color: '#cbd5e1' } }
-          }
-        }
-      });
-    }
-
-    // Policy Sliders Interaction
-    function updatePolicyParams() {
-      const alpha = parseFloat(document.getElementById('sliderAlpha').value);
-      const beta = parseInt(document.getElementById('sliderBeta').value);
-      const tau = parseInt(document.getElementById('sliderTau').value);
-      const cap = parseInt(document.getElementById('sliderCap').value);
-
-      document.getElementById('valAlpha').textContent = alpha.toFixed(2);
-      document.getElementById('valBeta').textContent = '₹' + beta;
-      document.getElementById('valTau').textContent = '₹' + tau;
-      document.getElementById('valCap').textContent = '₹' + cap.toLocaleString();
-
-      // Dynamically recalculate Pareto curve point for NYAYA
-      if (paretoChartInstance) {
-        const simulatedHarm = Math.max(8.0, 15.6 - (alpha - 0.65) * 12.0 + (beta - 345) * 0.02);
-        const simulatedLoss = Math.max(12000, 18500 + (alpha - 0.65) * 8000.0);
-        paretoChartInstance.data.datasets[2].data[0] = { x: Math.round(simulatedLoss), y: parseFloat(simulatedHarm.toFixed(1)) };
-        paretoChartInstance.update();
-      }
-    }
-
-    function resetPolicyDefaults() {
-      document.getElementById('sliderAlpha').value = 0.65;
-      document.getElementById('sliderBeta').value = 345;
-      document.getElementById('sliderTau').value = 500;
-      document.getElementById('sliderCap').value = 3000;
-      updatePolicyParams();
-    }
-
-    // Adjudicate Case in Analyst Queue
-    function adjudicateCase(txId, action) {
-      if (action === 'APPROVE') {
-        alert(`Case ${txId} APPROVED by Human Analyst.\nRemaining Escrowed Balance Released to Customer Account.\nRecord signed and committed to CPACF SHA-256 Ledger.`);
-      } else {
-        alert(`Case ${txId} MARKED AS FRAUD.\nCounterparty Quarantined. Customer Remaining Balance Preserved.`);
-      }
-    }
-
-    // Ledger Verification & Tamper Simulation
-    function verifyLedgerIntegrity() {
-      document.getElementById('ledgerTamperAlert').classList.add('hidden');
-      document.getElementById('ledgerStatusPill').textContent = "CHAIN VALID ✅";
-      document.getElementById('ledgerStatusPill').className = "px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-mono font-bold";
-      alert("CPACF Ledger Verification Complete:\n1,482 Blocks Checked via Hardware SHA-256.\nZero hash link breaks. All escrow AES-256-GCM ciphertexts valid.");
-    }
-
-    function simulateLedgerTamper() {
-      document.getElementById('ledgerTamperAlert').classList.remove('hidden');
-      document.getElementById('ledgerStatusPill').textContent = "TAMPER DETECTED ❌";
-      document.getElementById('ledgerStatusPill').className = "px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-xs font-mono font-bold";
-    }
-
-    // Configuration Modal
-    function toggleConfigModal() {
-      const modal = document.getElementById('configModal');
-      modal.classList.toggle('hidden');
-    }
-
-    function saveApiBaseUrl() {
-      const newUrl = document.getElementById('inputApiBaseUrl').value.trim();
-      if (newUrl) {
-        API_BASE_URL = newUrl;
-        localStorage.setItem('NYAYA_API_URL', newUrl);
-        toggleConfigModal();
-        checkBackendConnection();
-      }
-    }
-  </script>
+  <!-- Application Logic Scripts -->
+  <script src="scenarios.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
