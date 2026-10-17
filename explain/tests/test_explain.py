@@ -139,3 +139,11 @@ def test_non_mule_hold_explained_as_mule_ring_is_rejected():
     assert check_output(text, facts) == (False, "mule wording on a non-mule HOLD")
     mule = {**facts, "p_mule": 0.93, "clause_id": "CLAUSE-04"}
     assert check_output(text.replace("CLAUSE-10", "CLAUSE-04"), mule) == (True, "ok")
+
+
+def test_release_card_mentioning_escrow_or_stipend_is_rejected():
+    facts = {"decision": "RELEASE", "amount": 640, "severity_tier": 4, "hour": 2, "p_fraud": 0.26, "p_mule": 0.0,
+             "clause_id": "CLAUSE-01"}
+    text = ("The ₹640 pharmacy payment was released in full, and the ₹640 pharmacy payment was sent now as a "
+            "survival stipend, and the other ₹640 is held in escrow (policy CLAUSE-01).")
+    assert check_output(text, facts) == (False, "contradicts decision")
