@@ -47,5 +47,5 @@ podman run -d --name nyaya-api "${COMMON[@]}" --memory 2g -v "$VAR:/var/nyaya:Z"
 
 sleep 8
 podman pod ps
-curl -s localhost:8000/health && echo
-curl -s localhost:8000/api/v1/system | head -c 600 && echo
+curl -s http://127.0.0.1:8000/health && echo
+curl -s http://127.0.0.1:8000/api/v1/system | head -c 600 && echo
