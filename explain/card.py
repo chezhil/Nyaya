@@ -106,6 +106,10 @@ def check_output(text: str, facts: dict) -> tuple[bool, str]:
              "HOLD": ("paid in full", "released in full")}
     if any(w in text.lower() for w in other[facts["decision"]]):
         return False, "contradicts decision"
+    # A HOLD on expected harm alone (low mule score) must not be explained as a mule ring: Granite copies that wording
+    # from the HOLD example. 0.5 is below any mule threshold the policy uses, so real mule HOLDs are never rejected.
+    if facts["decision"] == "HOLD" and float(facts.get("p_mule") or 0) < 0.5 and "mule" in text.lower():
+        return False, "mule wording on a non-mule HOLD"
     return True, "ok"
 
 

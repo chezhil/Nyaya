@@ -130,3 +130,12 @@ def test_review_card_saying_released_in_full_is_rejected():
              "severity_tier": 5, "hour": 14, "p_fraud": 0.92, "p_mule": 0.01, "clause_id": "CLAUSE-02"}
     ok, why = check_output("The ₹25,000 stipend was reviewed. It was released in full (policy CLAUSE-02).", facts)
     assert not ok and why == "contradicts decision"
+
+
+def test_non_mule_hold_explained_as_mule_ring_is_rejected():
+    facts = {"decision": "HOLD", "amount": 48000, "severity_tier": 0, "hour": 3, "p_fraud": 1.0, "p_mule": 0.0,
+             "clause_id": "CLAUSE-10"}
+    text = "The ₹48,000 transfer was held because the payee looks like part of a mule ring (policy CLAUSE-10)."
+    assert check_output(text, facts) == (False, "mule wording on a non-mule HOLD")
+    mule = {**facts, "p_mule": 0.93, "clause_id": "CLAUSE-04"}
+    assert check_output(text.replace("CLAUSE-10", "CLAUSE-04"), mule) == (True, "ok")
