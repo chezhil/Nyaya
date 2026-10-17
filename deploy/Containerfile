@@ -1,3 +1,6 @@
+# NOT USED by deploy/pod.sh: podman 5.8 on the server can't build or commit on top of this base image
+# ("unsupported MIME type for compression"), so pod.sh runs the base image as is with the same env (see there).
+# Kept to document the intended image.
 # NYAYA runtime image: IBM's s390x Jupyter image (Python 3.12, torch + NNPA, xgboost, llama_cpp, Granite gguf)
 # plus the three pip packages in requirements.txt. Code is mounted from ~/shared/nyaya at run time (deploy/pod.sh),
 # so a `git pull` + `podman pod restart nyaya` ships new code without a rebuild.
