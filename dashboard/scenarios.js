@@ -32,7 +32,7 @@ const NYAYA_SCENARIOS = {
     p_fraud_raw: 0.428,
     p_mule: 0.024,
     conformal_set: ["legit"],
-    harm_delta: -1.45,
+    harm_delta: -1450.00, // Exact Rupees (₹): h_fraud (561.60) - h_hold (2011.60)
     h_fraud: 561.6,
     h_hold: 2011.6,
     latency_ms: 3.42,
@@ -91,7 +91,7 @@ const NYAYA_SCENARIOS = {
     p_fraud_raw: 0.580,
     p_mule: 0.078,
     conformal_set: ["legit", "fraud"],
-    harm_delta: 0.04,
+    harm_delta: 25.00, // Exact Rupees (₹): h_fraud (12125.0) - h_hold (12100.0) < tau(500) -> REVIEW
     h_fraud: 12125.0,
     h_hold: 12100.0,
     latency_ms: 3.88,
@@ -150,7 +150,7 @@ const NYAYA_SCENARIOS = {
     p_fraud_raw: 0.985,
     p_mule: 0.978,
     conformal_set: ["fraud"],
-    harm_delta: 5.42,
+    harm_delta: 81350.00, // Exact Rupees (₹): h_fraud (81770.0) - h_hold (420.0) -> HOLD
     h_fraud: 81770.0,
     h_hold: 420.0,
     latency_ms: 2.95,
@@ -209,7 +209,7 @@ const NYAYA_SCENARIOS = {
     p_fraud_raw: 0.018,
     p_mule: 0.008,
     conformal_set: ["legit"],
-    harm_delta: -3.10,
+    harm_delta: -327.00, // Exact Rupees (₹): h_fraud (18.0) - h_hold (345.0) -> RELEASE
     h_fraud: 18.0,
     h_hold: 345.0,
     latency_ms: 1.82,
@@ -268,7 +268,7 @@ const NYAYA_SCENARIOS = {
     p_fraud_raw: 0.992,
     p_mule: 0.420,
     conformal_set: ["fraud"],
-    harm_delta: 6.20,
+    harm_delta: 96087.00, // Exact Rupees (₹): h_fraud (96432.0) - h_hold (345.0) -> HOLD
     h_fraud: 96432.0,
     h_hold: 345.0,
     latency_ms: 2.14,
@@ -327,7 +327,7 @@ const NYAYA_SCENARIOS = {
     p_fraud_raw: 0.795,
     p_mule: 0.814,
     conformal_set: ["fraud"],
-    harm_delta: 2.15,
+    harm_delta: 7855.00, // Exact Rupees (₹): h_fraud (9275.0) - h_hold (1420.0) -> HOLD
     h_fraud: 9275.0,
     h_hold: 1420.0,
     latency_ms: 3.10,

@@ -1,11 +1,22 @@
 /**
  * NYAYA 2.0 - Core Dashboard Application Logic
  * Integrates all 4 tabs with live LinuxONE API (/api/v1) and offline fallback fixtures
- * Strictly compliant with Plan v4 §8, §9, §10 and CONTRACTS.md
+ * Strictly compliant with Plan v4 §8, §9, §10, CONTRACTS.md, and AGENTS.md rules
  */
 
-// Global Application State
-let API_BASE_URL = localStorage.getItem('NYAYA_API_URL') || 'http://localhost:8000';
+// Helper to escape untrusted strings before HTML insertion (XSS prevention)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Global Application State (Default to relative same-origin if hosted by FastAPI)
+let API_BASE_URL = localStorage.getItem('NYAYA_API_URL') || (window.location.protocol === 'file:' ? 'http://localhost:8000' : '');
 let isLiveBackend = false;
 let currentLanguage = 'ta'; // Default Tamil per Plan v4 specification
 let activeScenarioId = 1;
@@ -20,9 +31,9 @@ let calibrationChart = null;
 // Dynamic Policy Parameters
 let policyParams = {
   alpha: 0.65,
-  beta: 345, // Notified Tamil Nadu MGNREGS rural wage 2026-27
+  beta: 345, // Notified Tamil Nadu MGNREGS rural wage 2026-27 (Ministry of Rural Development)
   tau: 500,
-  cap_survival: 3000 // 50% TN SDRF emergency flood cash relief norm
+  cap_survival: 3000 // 50% TN SDRF emergency flood cash relief norm (TNSDMA)
 };
 
 // Notices Cache
@@ -45,12 +56,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 /**
  * Universal safe API fetcher supporting both /api/v1 prefix and root mount.
+ * Non-GET requests (POST, PUT, DELETE) are never retried to prevent duplicate side effects.
  * Gracefully handles timeouts, network drops, and HTTP errors without throwing uncaught exceptions.
  */
 async function apiFetch(endpoint, options = {}) {
   const timeoutMs = options.timeout || 2500;
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const v1Path = cleanEndpoint.startsWith('/api/v1') ? cleanEndpoint : `/api/v1${cleanEndpoint}`;
+  const isGet = (!options.method || options.method.toUpperCase() === 'GET');
 
   // Attempt 1: Standard /api/v1 prefix per CONTRACTS.md
   try {
@@ -62,11 +75,11 @@ async function apiFetch(endpoint, options = {}) {
       return await res.json();
     }
   } catch (err) {
-    // Suppress network errors for offline fallback
+    // Suppress network errors
   }
 
-  // Attempt 2: Direct path fallback in case endpoints are mounted at root
-  if (!cleanEndpoint.startsWith('/api/v1')) {
+  // Attempt 2: Only retry GET requests on direct root path to prevent duplicate non-idempotent calls
+  if (isGet && !cleanEndpoint.startsWith('/api/v1')) {
     try {
       const res = await fetch(`${API_BASE_URL}${cleanEndpoint}`, {
         signal: AbortSignal.timeout(timeoutMs),
@@ -76,7 +89,7 @@ async function apiFetch(endpoint, options = {}) {
         return await res.json();
       }
     } catch (err) {
-      // Suppress network errors for offline fallback
+      // Suppress network errors
     }
   }
 
@@ -99,12 +112,18 @@ async function fetchNotices() {
 async function probeBackend() {
   const pill = document.getElementById('connectionStatusPill');
   const label = document.getElementById('connectionStatusText');
+  const btnEvaluate = document.getElementById('btnRunCustomEvaluate');
 
   const data = await apiFetch('/system');
   if (data) {
     isLiveBackend = true;
     if (pill) pill.className = "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 shadow-sm";
     if (label) label.textContent = "CONNECTED: LinuxONE s390x";
+    if (btnEvaluate) {
+      btnEvaluate.disabled = false;
+      btnEvaluate.className = "w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-mono font-bold tracking-wider uppercase shadow";
+      btnEvaluate.textContent = "Run Real-Time LinuxONE Decision";
+    }
     populateHardwareStrip(data);
     return;
   }
@@ -112,10 +131,15 @@ async function probeBackend() {
   isLiveBackend = false;
   if (pill) pill.className = "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-950/70 text-amber-300 border border-amber-700/60";
   if (label) label.textContent = "OFFLINE FALLBACK: Using Local Fixtures";
+  if (btnEvaluate) {
+    btnEvaluate.disabled = true;
+    btnEvaluate.className = "w-full py-2 bg-slate-800 text-slate-500 rounded text-xs font-mono font-bold tracking-wider uppercase cursor-not-allowed";
+    btnEvaluate.textContent = "Live API Offline — Use Fixtures Above";
+  }
   populateHardwareStrip(typeof MOCK_SYSTEM_INFO !== 'undefined' ? MOCK_SYSTEM_INFO : {});
 }
 
-// Populate Header Hardware Telemetry Strip (Defensive against missing fields)
+// Populate Header Hardware Telemetry Strip (Defensive against missing fields & honest about measurements)
 function populateHardwareStrip(info) {
   const hwArch = document.getElementById('hwArch');
   const hwTelum = document.getElementById('hwTelum');
@@ -125,12 +149,12 @@ function populateHardwareStrip(info) {
 
   if (hwArch) hwArch.textContent = info?.system_architecture || "s390x Big Endian";
   if (hwTelum) {
-    const nnpaActive = info?.telum_accelerator?.nnpa_available ?? true;
+    const nnpaActive = info?.telum_accelerator?.nnpa_available;
     hwTelum.textContent = nnpaActive ? "nnpa: true (Active)" : "nnpa: false";
   }
   if (hwCrypto) {
-    const sha = info?.crypto_engine?.sha256_speed || "4.4 GB/s";
-    const aes = info?.crypto_engine?.aes_gcm_speed || "12.5 GB/s";
+    const sha = info?.crypto_engine?.sha256_speed || "~4.4 GB/s";
+    const aes = info?.crypto_engine?.aes_gcm_speed || "~12.5 GB/s";
     hwCrypto.textContent = `CPACF SHA-256 (${sha}) · AES-GCM (${aes})`;
   }
   if (hwSecurity) {
@@ -139,8 +163,7 @@ function populateHardwareStrip(info) {
     hwSecurity.textContent = `${selinux} · ${container}`;
   }
   if (hwLatency) {
-    const lat = info?.rolling_avg_latency_ms || '3.72';
-    hwLatency.textContent = `${lat}ms`;
+    hwLatency.textContent = info?.rolling_avg_latency_ms ? `${info.rolling_avg_latency_ms}ms` : "—";
   }
 }
 
@@ -183,18 +206,31 @@ function setupEventListeners() {
       jumpReplayToHour(targetHour);
     });
   }
+
+  // Delegated click event listener for analyst queue action buttons (XSS prevention)
+  const queueContainer = document.getElementById('analystQueueContainer');
+  if (queueContainer) {
+    queueContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.queue-action-btn');
+      if (btn) {
+        const txId = btn.getAttribute('data-tx-id');
+        const action = btn.getAttribute('data-action');
+        if (txId && action) {
+          adjudicateQueue(txId, action);
+        }
+      }
+    });
+  }
 }
 
 // Save API Base URL
 function saveApiUrl() {
   const input = document.getElementById('inputApiUrl');
   const url = input ? input.value.trim() : '';
-  if (url) {
-    API_BASE_URL = url;
-    localStorage.setItem('NYAYA_API_URL', url);
-    probeBackend();
-    toggleConfigModal();
-  }
+  API_BASE_URL = url;
+  localStorage.setItem('NYAYA_API_URL', url);
+  probeBackend();
+  toggleConfigModal();
 }
 
 function toggleConfigModal() {
@@ -245,7 +281,8 @@ function stepReplay() {
   if (typeof REPLAY_HOURS_DATA !== 'undefined' && replayStepIndex >= REPLAY_HOURS_DATA.length) {
     pauseReplay();
     const btnText = document.getElementById('replayBtnText');
-    if (btnText) btnText.textContent = "Replay Complete";
+    if (btnText) btnText.textContent = "Restart Replay";
+    replayStepIndex = 0; // Reset index so replay can restart cleanly
     return;
   }
   updateReplayUI(replayStepIndex);
@@ -270,8 +307,8 @@ function resetReplay() {
   if (scrubber) scrubber.value = 0;
   updateReplayUI(0);
 
-  if (legFeed) legFeed.innerHTML = `<div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center">Press "Start Replay" to initiate transaction comparison stream...</div>`;
-  if (nyaFeed) nyaFeed.innerHTML = `<div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center">Press "Start Replay" to initiate transaction comparison stream...</div>`;
+  if (legFeed) legFeed.innerHTML = `<div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center text-xs font-mono">Press "Start Replay" to initiate transaction comparison stream...</div>`;
+  if (nyaFeed) nyaFeed.innerHTML = `<div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center text-xs font-mono">Press "Start Replay" to initiate transaction comparison stream...</div>`;
 }
 
 function updateReplayUI(idx) {
@@ -288,16 +325,16 @@ function updateReplayUI(idx) {
   if (sevBadge) sevBadge.textContent = `Severity Tier ${data.severity}`;
   if (scrubber) scrubber.value = data.hour;
 
-  // Legacy Counters
+  // Legacy Counters (Honest metrics without unmeasured linear formulas)
   const legFreezeCount = document.getElementById('legacyFreezeCount');
   const legFreezePct = document.getElementById('legacyFreezePct');
   const legCash = document.getElementById('legacyCashAvailable');
   const legBleed = document.getElementById('legacyBleedAmount');
 
-  if (legFreezeCount) legFreezeCount.textContent = (data.legacyFrozen || 0).toLocaleString();
-  if (legFreezePct) legFreezePct.textContent = `${(34.0 + data.hour * 0.45).toFixed(1)}% false freeze`;
-  if (legCash) legCash.textContent = `₹${(data.legacyCash || 0).toLocaleString()}`;
-  if (legBleed) legBleed.textContent = `₹${(data.legacyBleed || 0).toLocaleString()}`;
+  if (legFreezeCount) legFreezeCount.textContent = data.legacyFrozen !== undefined ? data.legacyFrozen.toLocaleString() : "—";
+  if (legFreezePct) legFreezePct.textContent = data.legacyFreezePct || "Static 1% FPR Rule";
+  if (legCash) legCash.textContent = data.legacyCash !== undefined ? `₹${data.legacyCash.toLocaleString()}` : "—";
+  if (legBleed) legBleed.textContent = data.legacyBleed !== undefined ? `₹${data.legacyBleed.toLocaleString()}` : "—";
 
   // NYAYA Counters
   const nyaZero = document.getElementById('nyayaZeroVictims');
@@ -306,9 +343,9 @@ function updateReplayUI(idx) {
   const nyaBlocked = document.getElementById('nyayaBlockedCount');
 
   if (nyaZero) nyaZero.textContent = "0.0%"; // GUARANTEED BY DESIGN (#20)
-  if (nyaCash) nyaCash.textContent = `₹${(data.nyayaCash || 0).toLocaleString()}`;
-  if (nyaStipends) nyaStipends.textContent = `${data.nyayaStipends || 0} micro-stipends`;
-  if (nyaBlocked) nyaBlocked.textContent = `${data.nyayaBlocked || 0} rings blocked`;
+  if (nyaCash) nyaCash.textContent = data.nyayaCash !== undefined ? `₹${data.nyayaCash.toLocaleString()}` : "—";
+  if (nyaStipends) nyaStipends.textContent = data.nyayaStipends !== undefined ? `${data.nyayaStipends} micro-stipends` : "—";
+  if (nyaBlocked) nyaBlocked.textContent = data.nyayaBlocked !== undefined ? `${data.nyayaBlocked} rings blocked` : "—";
 
   appendReplayRows(data.hour);
 }
@@ -430,16 +467,12 @@ function populateEvaluatorInputs(data) {
   const inSev = document.getElementById('inputSeverity');
   const inHour = document.getElementById('inputHour');
   const inGeo = document.getElementById('inputGeoShift');
-  const inFan = document.getElementById('inputFanIn');
-  const inMci = document.getElementById('inputMci');
 
   if (inAmt && data.amount !== undefined) inAmt.value = data.amount;
   if (inCat && data.merchant_category !== undefined) inCat.value = data.merchant_category;
   if (inSev && data.severity_tier !== undefined) inSev.value = data.severity_tier;
   if (inHour && data.hour !== undefined) inHour.value = data.hour;
   if (inGeo && data.geo_shift_km !== undefined) inGeo.value = data.geo_shift_km;
-  if (inFan && data.fan_in_15m !== undefined) inFan.value = data.fan_in_15m;
-  if (inMci && data.mci !== undefined) inMci.value = data.mci;
 }
 
 // Fetch IBM Granite Explanation card via GET /api/v1/explain/{id}
@@ -470,14 +503,14 @@ function renderXRayResults(data) {
   const modelElem = document.getElementById('xrayModelVersion');
 
   const txId = data.tx_id || data.id || "TX_UNKNOWN";
-  const releaseNow = data.release_now !== undefined ? data.release_now : (data.amount || 0);
-  const escrow = data.escrow !== undefined ? data.escrow : 0;
+  const releaseNow = data.release_now ?? data.amount ?? 0;
+  const escrow = data.escrow ?? 0;
   const decision = data.decision || "RELEASE";
-  const latency = data.latency_ms !== undefined ? data.latency_ms : (3.4).toFixed(2);
-  const modelVersion = data.model_version || "xgboost-3.4.1+torch-nnpa-v1";
+  const latency = data.latency_ms ? `${data.latency_ms} ms` : "—";
+  const modelVersion = data.model_version || "—";
 
   if (txIdElem) txIdElem.textContent = txId;
-  if (latencyElem) latencyElem.textContent = `${latency} ms`;
+  if (latencyElem) latencyElem.textContent = latency;
   if (modelElem) modelElem.textContent = modelVersion;
 
   if (badge && amountDisbursed && escrowHeld) {
@@ -488,7 +521,7 @@ function renderXRayResults(data) {
       escrowHeld.textContent = "₹0";
     } else if (decision === 'REVIEW') {
       badge.className = "px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-600 shadow-md";
-      badge.textContent = "REVIEW: ₹3,000 Instant Stipend + Escrow";
+      badge.textContent = `REVIEW: Instant Stipend (up to ₹${policyParams.cap_survival.toLocaleString()}) + Escrow`;
       amountDisbursed.textContent = `₹${releaseNow.toLocaleString()} (Instant Stipend)`;
       escrowHeld.textContent = `₹${escrow.toLocaleString()} (48h Escrow)`;
     } else {
@@ -499,11 +532,7 @@ function renderXRayResults(data) {
     }
   }
 
-  // Dual Models & Uncertainty
-  const pFraud = typeof data.p_fraud === 'number' ? data.p_fraud : 0.05;
-  const pMule = typeof data.p_mule === 'number' ? data.p_mule : 0.01;
-  const harmDelta = typeof data.harm_delta === 'number' ? data.harm_delta : 0.0;
-
+  // Dual Models & Uncertainty (Honest formatting with dash fallbacks)
   const valPFraud = document.getElementById('valPFraud');
   const barPFraud = document.getElementById('barPFraud');
   const valPMule = document.getElementById('valPMule');
@@ -511,18 +540,24 @@ function renderXRayResults(data) {
   const valConfSet = document.getElementById('valConformalSet');
   const valHarmDelta = document.getElementById('valHarmDelta');
 
-  if (valPFraud) valPFraud.textContent = pFraud.toFixed(3);
-  if (barPFraud) barPFraud.style.width = `${Math.min(pFraud * 100, 100)}%`;
+  if (valPFraud) valPFraud.textContent = typeof data.p_fraud === 'number' ? data.p_fraud.toFixed(3) : "—";
+  if (barPFraud) barPFraud.style.width = typeof data.p_fraud === 'number' ? `${Math.min(data.p_fraud * 100, 100)}%` : "0%";
 
-  if (valPMule) valPMule.textContent = pMule.toFixed(3);
-  if (barPMule) barPMule.style.width = `${Math.min(pMule * 100, 100)}%`;
+  if (valPMule) valPMule.textContent = typeof data.p_mule === 'number' ? data.p_mule.toFixed(3) : "—";
+  if (barPMule) barPMule.style.width = typeof data.p_mule === 'number' ? `${Math.min(data.p_mule * 100, 100)}%` : "0%";
 
-  const confSetText = Array.isArray(data.conformal_set) ? `{${data.conformal_set.join(', ')}}` : (data.conformal_set || "{legit}");
+  const confSetText = Array.isArray(data.conformal_set) ? `{${data.conformal_set.join(', ')}}` : (data.conformal_set || "—");
   if (valConfSet) valConfSet.textContent = confSetText;
 
   if (valHarmDelta) {
-    valHarmDelta.textContent = harmDelta > 0 ? `+${harmDelta.toFixed(2)}` : harmDelta.toFixed(2);
-    valHarmDelta.className = harmDelta <= 0 ? "font-bold text-emerald-400" : "font-bold text-rose-400";
+    if (typeof data.harm_delta === 'number') {
+      const hVal = Math.round(data.harm_delta);
+      valHarmDelta.textContent = hVal > 0 ? `+₹${hVal.toLocaleString()}` : `-₹${Math.abs(hVal).toLocaleString()}`;
+      valHarmDelta.className = data.harm_delta <= 0 ? "font-bold text-emerald-400" : "font-bold text-rose-400";
+    } else {
+      valHarmDelta.textContent = "—";
+      valHarmDelta.className = "font-bold text-slate-400";
+    }
   }
 
   // Counterfactual Box (#10)
@@ -544,12 +579,12 @@ function renderXRayResults(data) {
   // IBM Granite 350M Explanation & Masked Prompt (#2)
   const valGraniteOutput = document.getElementById('valGraniteOutput');
   const valMaskedPrompt = document.getElementById('valMaskedPrompt');
-  if (valGraniteOutput) valGraniteOutput.textContent = data.granite_output || data.card_template || "Compliance decision verified.";
+  if (valGraniteOutput) valGraniteOutput.textContent = data.granite_output || data.card_template || "—";
   if (valMaskedPrompt) valMaskedPrompt.textContent = data.masked_prompt || `Transaction: [MASKED] | Amount: ₹${(data.amount || 0).toLocaleString()}`;
 
   // Ledger Hash & Verification
   const valLedgerHash = document.getElementById('valLedgerHash');
-  if (valLedgerHash) valLedgerHash.textContent = data.ledger_hash || "8f4a13b62908fca9b19e4811b7829104fa281b99a4c8520e1074a11b64917a22";
+  if (valLedgerHash) valLedgerHash.textContent = data.ledger_hash || "—";
 
   // Update SHAP chart
   updateShapChart(data.reasons || []);
@@ -604,15 +639,15 @@ function updateNoticePhone(data) {
     text = dict[decision]?.[currentLanguage] || dict[decision]?.en || "Transaction alert.";
   }
 
-  // Populate dynamic slots
-  const amtStr = (data.amount || 0).toLocaleString();
-  const relStr = (data.release_now !== undefined ? data.release_now : (data.amount || 0)).toLocaleString();
-  const escStr = (data.escrow !== undefined ? data.escrow : 0).toLocaleString();
+  // Populate dynamic slots using replaceAll to replace all occurrences
+  const amtStr = (data.amount ?? 0).toLocaleString();
+  const relStr = (data.release_now ?? data.amount ?? 0).toLocaleString();
+  const escStr = (data.escrow ?? 0).toLocaleString();
 
-  text = text.replace('{amount}', amtStr)
-             .replace('{release_now}', relStr)
-             .replace('{escrow}', escStr)
-             .replace('{hours}', '48');
+  text = text.replaceAll('{amount}', amtStr)
+             .replaceAll('{release_now}', relStr)
+             .replaceAll('{escrow}', escStr)
+             .replaceAll('{hours}', '48');
 
   const phoneBody = document.getElementById('phoneNoticeBody');
   if (phoneBody) phoneBody.textContent = text;
@@ -656,16 +691,26 @@ function toggleMaskedPrompt() {
   if (panel) panel.classList.toggle('hidden');
 }
 
-// Evaluate Custom Parameters Form via POST /api/v1/evaluate
+// Evaluate Custom Parameters Form via POST /api/v1/evaluate (LIVE ONLY — NO FAKE OFFLINE FORMULAS)
 async function evaluateCustomForm() {
-  const amount = parseFloat(document.getElementById('inputAmount')?.value) || 25000;
-  const category = document.getElementById('inputCategory')?.value || "clinic";
-  const severity = parseInt(document.getElementById('inputSeverity')?.value) || 4;
-  const hour = parseInt(document.getElementById('inputHour')?.value) || 2;
-  const geoShift = parseFloat(document.getElementById('inputGeoShift')?.value) || 50;
-  const fanIn = parseInt(document.getElementById('inputFanIn')?.value) || 2;
-  const mci = parseFloat(document.getElementById('inputMci')?.value) || 0.05;
+  if (!isLiveBackend) {
+    alert("Live LinuxONE API unavailable. Cannot evaluate ungrounded custom inputs offline.\n\nPlease select one of the 6 curated fixture scenarios above for verified demonstration, or connect the backend API.");
+    return;
+  }
 
+  // Safe number parsing using Number.isFinite
+  const numOr = (val, def) => {
+    const n = Number(val);
+    return Number.isFinite(n) ? n : def;
+  };
+
+  const amount = numOr(document.getElementById('inputAmount')?.value, 25000);
+  const category = document.getElementById('inputCategory')?.value || "clinic";
+  const severity = numOr(document.getElementById('inputSeverity')?.value, 4);
+  const hour = numOr(document.getElementById('inputHour')?.value, 2);
+  const geoShift = numOr(document.getElementById('inputGeoShift')?.value, 50);
+
+  // Per CONTRACTS.md §7: client sends ONLY payment columns. Model B graph features are computed server-side.
   const payload = {
     tx_id: "TX_CUSTOM_" + Math.floor(Math.random() * 90000 + 10000),
     sender_id: "P_CITIZEN_CUSTOM",
@@ -674,106 +719,57 @@ async function evaluateCustomForm() {
     merchant_category: category,
     severity_tier: severity,
     hour: hour,
-    geo_shift_km: geoShift,
-    fan_in_15m: fanIn,
-    mci: mci,
-    in_disaster_zone: severity > 0 ? 1 : 0
+    geo_shift_km: geoShift
   };
 
-  // Try Live Backend evaluate endpoint
-  if (isLiveBackend) {
-    const liveRes = await apiFetch('/evaluate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (liveRes) {
-      renderXRayResults(liveRes);
-      fetchGraniteExplanation(liveRes.explain_id || liveRes.tx_id);
-      alert(`Evaluation processed by IBM LinuxONE s390x Engine in ${liveRes.latency_ms || 3.5}ms!\nDecision: ${liveRes.decision}`);
-      return;
-    }
+  const liveRes = await apiFetch('/evaluate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (liveRes) {
+    renderXRayResults(liveRes);
+    fetchGraniteExplanation(liveRes.explain_id || liveRes.tx_id);
+    alert(`Evaluation processed by IBM LinuxONE s390x Engine in ${liveRes.latency_ms || '—'}ms!\nDecision: ${liveRes.decision}`);
+  } else {
+    alert("Evaluation failed: LinuxONE backend returned an error. Please check server logs.");
   }
-
-  // Offline Mathematical Engine Calculation (Harm Formula & Conformal Bounds)
-  const isMule = (mci >= 0.70 || fanIn >= 10);
-  const pMule = Math.min(Math.max(mci * 0.9 + (fanIn / 30) * 0.2, 0.01), 0.99);
-  const pFraud = Math.min(Math.max((geoShift / 200) * 0.3 + (hour < 6 ? 0.3 : 0.05) - (severity * 0.1), 0.02), 0.98);
-
-  let decision = "RELEASE";
-  let releaseNow = amount;
-  let escrow = 0;
-
-  if (isMule || pFraud > 0.85) {
-    decision = "HOLD";
-    releaseNow = 0;
-    escrow = 0;
-  } else if (pFraud > 0.35 || (pFraud > 0.25 && severity >= 3)) {
-    decision = "REVIEW";
-    releaseNow = Math.min(amount, policyParams.cap_survival);
-    escrow = Math.max(0, amount - releaseNow);
-  }
-
-  const customResult = {
-    tx_id: payload.tx_id,
-    id: payload.tx_id,
-    amount: amount,
-    release_now: releaseNow,
-    escrow: escrow,
-    decision: decision,
-    p_fraud: pFraud,
-    p_mule: pMule,
-    conformal_set: decision === 'REVIEW' ? ["legit", "fraud"] : decision === 'RELEASE' ? ["legit"] : ["fraud"],
-    harm_delta: decision === 'HOLD' ? 3.8 : decision === 'REVIEW' ? 0.05 : -1.8,
-    latency_ms: (3.2 + Math.random() * 0.8).toFixed(2),
-    model_version: "xgboost-3.4.1+torch-nnpa-v1 (local-calc)",
-    reasons: [
-      { feature: `Disaster Tier ${severity}`, value: severity, contribution: -0.45 },
-      { feature: `Geo Shift (${geoShift}km)`, value: geoShift, contribution: +0.32 },
-      { feature: `Hour (${hour}:00)`, value: hour, contribution: hour < 6 ? +0.28 : -0.15 }
-    ],
-    counterfactual: {
-      text: decision === 'HOLD' ? "Transaction would flip to REVIEW if counterparty fan-in was under 5 senders." : "Parameters validated under active disaster protocol."
-    },
-    policy_clause: {
-      id: decision === 'HOLD' ? "CLAUSE-04" : decision === 'REVIEW' ? "CLAUSE-02" : "CLAUSE-01",
-      title: decision === 'HOLD' ? "Mule-Ring & Syndicate Override" : decision === 'REVIEW' ? "Provisional Survival Micro-Stipend" : "Displacement Anomaly Recognition",
-      text: decision === 'REVIEW' ? "Under REVIEW, the engine releases up to ₹3,000 liquid sustenance immediately." : "Displacement anomalies are decoupled from syndicate mule networks."
-    },
-    masked_prompt: `Transaction: [ACCOUNT_MASKED] | Amount: ₹${amount.toLocaleString()} | Decision: ${decision}`,
-    granite_output: `Transaction evaluated as ${decision}. Disbursed immediately: ₹${releaseNow.toLocaleString()}. Buffered in escrow: ₹${escrow.toLocaleString()}. Grounded in CLAUSE-${decision === 'HOLD' ? '04' : decision === 'REVIEW' ? '02' : '01'}.`,
-    ledger_hash: "a4c8520e1074a11b64917a228f4a13b62908fca9b19e4811b7829104fa281b99"
-  };
-
-  renderXRayResults(customResult);
 }
 
-// File One-Tap Urgent Appeal via POST /api/v1/appeal/{id}
+// File One-Tap Urgent Appeal via POST /api/v1/appeal/{id} (Live Backend Confirmation Required)
 async function fileAppeal() {
   const txElem = document.getElementById('xrayTxId');
   const txId = txElem ? txElem.textContent : "TX_APPEAL";
   const curScenario = (typeof NYAYA_SCENARIOS !== 'undefined') ? NYAYA_SCENARIOS[activeScenarioId] : null;
 
-  // Post to live backend appeal endpoint
-  if (isLiveBackend) {
-    await apiFetch(`/appeal/${txId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tx_id: txId,
-        reason: "Disaster evacuee medical emergency appeal filed via beneficiary device."
-      })
-    });
+  if (!isLiveBackend) {
+    alert("Cannot submit appeal: LinuxONE Emergency Operations backend is unreachable.");
+    return;
   }
 
-  // Prepend appeal into active analyst queue for immediate human-in-the-loop review
+  const appealRes = await apiFetch(`/appeal/${txId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tx_id: txId,
+      reason: "Disaster evacuee medical emergency appeal filed via beneficiary device."
+    })
+  });
+
+  if (!appealRes) {
+    alert(`Appeal submission failed: Server could not process appeal for ${txId}. Status unchanged.`);
+    return;
+  }
+
+  // Prepend confirmed appeal into active analyst queue
   const newAppealItem = {
     tx_id: txId,
     name: curScenario ? `${curScenario.name} (Urgent Appeal)` : "Beneficiary Urgent Appeal",
-    amount: curScenario ? curScenario.amount : 25000,
-    stipend_paid: curScenario ? curScenario.release_now : 3000,
-    escrowed: curScenario ? curScenario.escrow : 22000,
-    category: curScenario ? curScenario.merchant_category : "pharmacy",
+    amount: curScenario?.amount ?? 25000,
+    stipend_paid: curScenario?.release_now ?? policyParams.cap_survival,
+    escrowed: curScenario?.escrow ?? 22000,
+    category: curScenario?.merchant_category || "pharmacy",
     time_str: "Just now",
     status: "APPEAL_FILED",
     reason: "Evacuee tapped One-Tap Urgent Appeal in mobile notice. Flagged for immediate officer adjudication.",
@@ -821,16 +817,7 @@ async function fetchParetoOperatingPoint() {
     if (paretoData && paretoChart && paretoData.nyaya_operating_point) {
       paretoChart.data.datasets[2].data[0] = paretoData.nyaya_operating_point;
       paretoChart.update();
-      return;
     }
-  }
-
-  // Dynamic client-side sensitivity update on Pareto curve
-  if (paretoChart) {
-    const harm = Math.max(6.0, 15.6 - (policyParams.alpha - 0.65) * 14.0 + (policyParams.beta - 345) * 0.02);
-    const loss = Math.max(12000, 18500 + (policyParams.alpha - 0.65) * 9200.0);
-    paretoChart.data.datasets[2].data[0] = { x: Math.round(loss), y: parseFloat(harm.toFixed(1)) };
-    paretoChart.update();
   }
 }
 
@@ -867,6 +854,7 @@ async function fetchAnalystQueue() {
   }
 }
 
+// Render Analyst Queue Items (Fully XSS-safe with text escaping and delegated event listeners)
 function renderAnalystQueueItems() {
   const container = document.getElementById('analystQueueContainer');
   const countBadge = document.getElementById('queueCountBadge');
@@ -885,56 +873,73 @@ function renderAnalystQueueItems() {
     return;
   }
 
-  container.innerHTML = activeQueueItems.map(item => `
-    <div id="queueRow_${item.tx_id}" class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
-      <div class="flex justify-between items-start text-xs font-mono">
-        <div>
-          <span class="font-bold text-white">${item.tx_id} · ${item.name || 'Emergency Evacuee'}</span>
-          <div class="text-[11px] text-slate-400">Total: ₹${(item.amount || 0).toLocaleString()} · Stipend Paid: ₹${(item.stipend_paid || 3000).toLocaleString()} · Escrowed: ₹${(item.escrowed || 0).toLocaleString()}</div>
-          <div class="text-[10px] text-indigo-400">Payload: AES-256-GCM [Encrypted]</div>
+  container.innerHTML = activeQueueItems.map(item => {
+    const safeId = escapeHtml(item.tx_id);
+    const safeName = escapeHtml(item.name || 'Emergency Evacuee');
+    const safeReason = escapeHtml(item.reason || 'Conformal risk review pending emergency verification.');
+    const safeClause = escapeHtml(item.clause || 'CLAUSE-03');
+    const isAppeal = item.status === 'APPEAL_FILED';
+
+    return `
+      <div id="queueRow_${safeId}" class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
+        <div class="flex justify-between items-start text-xs font-mono">
+          <div>
+            <span class="font-bold text-white">${safeId} · ${safeName}</span>
+            <div class="text-[11px] text-slate-400">Total: ₹${(item.amount ?? 0).toLocaleString()} · Stipend Paid: ₹${(item.stipend_paid ?? policyParams.cap_survival).toLocaleString()} · Escrowed: ₹${(item.escrowed ?? 0).toLocaleString()}</div>
+            <div class="text-[10px] text-indigo-400">Payload: AES-256-GCM [Encrypted]</div>
+          </div>
+          <span class="px-2 py-0.5 rounded ${isAppeal ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'} text-[10px] font-bold">
+            ${isAppeal ? 'ONE-TAP APPEAL FILED' : 'CONFORMAL REVIEW'}
+          </span>
         </div>
-        <span class="px-2 py-0.5 rounded ${item.status === 'APPEAL_FILED' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'} text-[10px] font-bold">
-          ${item.status === 'APPEAL_FILED' ? 'ONE-TAP APPEAL FILED' : 'CONFORMAL REVIEW'}
-        </span>
-      </div>
-      <p class="text-xs text-slate-300 italic font-sans">
-        "${item.reason || 'Conformal risk review pending emergency verification.'}"
-      </p>
-      <div class="pt-2 flex justify-between items-center text-xs font-mono">
-        <span class="text-slate-400">Auto-Release: <strong class="text-emerald-400">${item.hours_remaining ? item.hours_remaining.toFixed(1) + 'h' : '46h 12m'}</strong> (${item.clause || 'CLAUSE-03'})</span>
-        <div class="flex gap-2">
-          <button onclick="adjudicateQueue('${item.tx_id}', 'APPROVE')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded">Approve Escrow</button>
-          <button onclick="adjudicateQueue('${item.tx_id}', 'DENY')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded">Confirm Fraud</button>
+        <p class="text-xs text-slate-300 italic font-sans">
+          "${safeReason}"
+        </p>
+        <div class="pt-2 flex justify-between items-center text-xs font-mono">
+          <span class="text-slate-400">Auto-Release: <strong class="text-emerald-400">${item.hours_remaining ? item.hours_remaining.toFixed(1) + 'h' : '48h'}</strong> (${safeClause})</span>
+          <div class="flex gap-2">
+            <button data-action="APPROVE" data-tx-id="${safeId}" class="queue-action-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded">Approve Escrow</button>
+            <button data-action="DENY" data-tx-id="${safeId}" class="queue-action-btn px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded">Confirm Fraud</button>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-// Adjudicate Queue via POST /api/v1/queue/{id}
+// Adjudicate Queue via POST /api/v1/queue/{id} (Live Backend Confirmation Required)
 async function adjudicateQueue(txId, action) {
-  if (isLiveBackend) {
-    await apiFetch(`/queue/${txId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: action.toLowerCase() === 'approve' ? 'approve' : 'deny',
-        analyst: 'Aaditya-Lead'
-      })
-    });
+  if (!isLiveBackend) {
+    alert(`Action failed: Cannot adjudicate case ${txId} while LinuxONE backend is unreachable.\n\nEscrow funds and status remain untouched on the ledger.`);
+    return;
+  }
+
+  const analystId = localStorage.getItem('NYAYA_ANALYST_ID') || 'analyst_ops_01';
+  const res = await apiFetch(`/queue/${txId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: action.toLowerCase() === 'approve' ? 'approve' : 'deny',
+      analyst: analystId
+    })
+  });
+
+  if (!res) {
+    alert(`Adjudication failed: Server could not process ${action} for ${txId}. Status unchanged.`);
+    return;
   }
 
   activeQueueItems = activeQueueItems.filter(item => item.tx_id !== txId);
   renderAnalystQueueItems();
 
   if (action === 'APPROVE') {
-    alert(`Case ${txId} APPROVED by Officer.\nRemaining escrowed balance released immediately to beneficiary account.\nRecord signed and committed to SHA-256 CPACF Ledger.`);
+    alert(`Case ${txId} APPROVED by Officer ${analystId}.\nRemaining escrow balance released to beneficiary.\nTransaction signed and committed to CPACF SHA-256 Ledger.`);
   } else {
-    alert(`Case ${txId} FRAUD CONFIRMED.\nEscrow cancelled, counterparty placed into quarantine.`);
+    alert(`Case ${txId} FRAUD CONFIRMED.\nEscrow cancelled, counterparty quarantined.`);
   }
 }
 
-// Fetch Red-Team Evaluation via GET /api/v1/redteam (#19)
+// Fetch Red-Team Evaluation via GET /api/v1/redteam (#19) (XSS Safe)
 async function fetchRedTeamEvaluation() {
   if (!isLiveBackend) return;
   const redData = await apiFetch('/redteam');
@@ -944,39 +949,52 @@ async function fetchRedTeamEvaluation() {
       tbody.innerHTML = redData.attacks.map(atk => `
         <tr class="hover:bg-slate-850">
           <td class="p-3 font-bold text-white flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-rose-500"></span> ${atk.name}
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span> ${escapeHtml(atk.name)}
           </td>
-          <td class="p-3">${atk.strategy}</td>
-          <td class="p-3 text-slate-400"><code>${atk.weakness}</code></td>
-          <td class="p-3 text-blue-300">${atk.mechanism}</td>
-          <td class="p-3 font-bold text-emerald-400">${atk.detection_rate}%</td>
-          <td class="p-3 text-slate-400">${atk.limitation}</td>
+          <td class="p-3">${escapeHtml(atk.strategy)}</td>
+          <td class="p-3 text-slate-400"><code>${escapeHtml(atk.weakness)}</code></td>
+          <td class="p-3 text-blue-300">${escapeHtml(atk.mechanism)}</td>
+          <td class="p-3 font-bold text-emerald-400">${escapeHtml(atk.detection_rate)}%</td>
+          <td class="p-3 text-slate-400">${escapeHtml(atk.limitation)}</td>
         </tr>
       `).join('');
     }
   }
 }
 
-// Verify Ledger Integrity via GET /api/v1/ledger/verify (#13)
+// Verify Ledger Integrity via GET /api/v1/ledger/verify (#13) (Strict Backend Validation)
 async function verifyLedgerIntegrity() {
   const alertBox = document.getElementById('tamperWarningBox');
   const badge = document.getElementById('ledgerIntegrityBadge');
+  const blocksElem = document.getElementById('valVerifiedBlocks');
   if (alertBox) alertBox.classList.add('hidden');
 
-  let blocksChecked = 1482;
-  if (isLiveBackend) {
-    const liveVerify = await apiFetch('/ledger/verify');
-    if (liveVerify && liveVerify.blocks_checked !== undefined) {
-      blocksChecked = liveVerify.blocks_checked;
+  if (!isLiveBackend) {
+    if (badge) {
+      badge.textContent = "COULD NOT VERIFY (Offline)";
+      badge.className = "px-2.5 py-1 rounded bg-amber-950 text-amber-300 border border-amber-700 text-xs font-mono font-bold";
     }
+    if (blocksElem) blocksElem.textContent = "—";
+    alert("Cannot verify ledger integrity: LinuxONE backend unreachable.\n\nPlease connect to the live API to verify CPACF hardware SHA-256 chain.");
+    return;
   }
 
-  if (badge) {
-    badge.textContent = "CHAIN VALID ✅";
-    badge.className = "px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-xs font-mono font-bold";
+  const liveVerify = await apiFetch('/ledger/verify');
+  if (liveVerify && liveVerify.valid === true) {
+    const blocksChecked = liveVerify.blocks_checked ?? liveVerify.count ?? "All";
+    if (badge) {
+      badge.textContent = "CHAIN VALID ✅";
+      badge.className = "px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-xs font-mono font-bold";
+    }
+    if (blocksElem) blocksElem.textContent = `${blocksChecked} Blocks`;
+    alert(`CPACF Hardware Ledger Verification: PASSED ✅\nRecomputed ${blocksChecked} blocks via CPACF hardware SHA-256 (>4 GB/s).\nZero broken hashes. All escrow AES-256-GCM ciphertexts valid.`);
+  } else {
+    if (badge) {
+      badge.textContent = "VERIFICATION FAILED ❌";
+      badge.className = "px-2.5 py-1 rounded bg-rose-950 text-rose-300 border border-rose-700 text-xs font-mono font-bold";
+    }
+    alert("CPACF Hardware Ledger Verification: FAILED ❌\nHash chain integrity error or corrupted blocks detected on server.");
   }
-
-  alert(`CPACF Hardware Ledger Verification: PASSED ✅\nRecomputed ${blocksChecked.toLocaleString()} blocks via CPACF hardware SHA-256 (>4 GB/s).\nZero broken hashes. All escrow AES-256-GCM ciphertexts valid.`);
 }
 
 function simulateLedgerTamper() {
@@ -1031,13 +1049,13 @@ function initAllCharts() {
       data: {
         datasets: [
           {
-            label: 'Legacy FICO Rules',
+            label: 'Legacy FICO Rules (Static 1% FPR)',
             data: [{ x: 42000, y: 88.4 }],
             backgroundColor: '#f43f5e',
             pointRadius: 9
           },
           {
-            label: 'Naive Geo Bypass',
+            label: 'Naive Geo Bypass (Complete Leniency)',
             data: [{ x: 395000, y: 68.2 }],
             backgroundColor: '#f59e0b',
             pointRadius: 9
@@ -1092,7 +1110,7 @@ function initAllCharts() {
             pointRadius: 0
           },
           {
-            label: 'XGBoost Raw Probabilities (Brier: 0.112)',
+            label: 'XGBoost Raw Scores (Brier: 0.112)',
             data: [0.02, 0.38, 0.64, 0.84, 0.95, 0.99],
             borderColor: '#f43f5e',
             borderWidth: 2,

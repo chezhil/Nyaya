@@ -10,8 +10,8 @@
 | **Decadal Displacements (2015–2024)** | **32.3 million** cumulative internal displacements in India over 10 years, ranking **3rd highest in the world**. | IDMC *GRID 2025* |
 | **Vulnerable Account Infrastructure** | **59.09 crore** Pradhan Mantri Jan Dhan Yojana (PMJDY) accounts as of August 2026. Approximately **78%** are located in rural and semi-urban locations—the exact accounts receiving emergency Direct Benefit Transfers (DBT), relief grants, and wage credits. | Ministry of Finance / Press Information Bureau (PIB) |
 | **Unmeasured Harm Thesis** | *"No commercial bank or public agency measures how many innocent disaster victims have their accounts mistakenly frozen at midnight during floods. NYAYA makes this hidden humanitarian harm measurable and preventable."* | NYAYA Core Thesis |
-| **Grounded Parameter: $\beta$** | **₹345 / day**: Set to 1 day of the official notified rural daily minimum wage for Tamil Nadu (under the 2026–27 VB-G RAM G / MGNREGS notification; revised from ₹336/day in 2025–26). Represents the economic injury of freezing a family's daily bread. | Ministry of Rural Development, Govt. of India |
-| **Grounded Parameter: Stipend Cap** | **₹3,000**: Grounded in 50% of the Tamil Nadu State Disaster Response Fund (SDRF) Cyclone Michaung emergency flood-relief cash grant (₹6,000 per affected household) for immediate 48-hour household survival. | Government of Tamil Nadu (Disaster Management) |
+| **Grounded Parameter: $\beta$** | **₹345 / day**: Set to 1 day of the official notified rural daily minimum wage for Tamil Nadu (under the 2026–27 VB-G RAM G / MGNREGS notification; revised from ₹336/day in 2025–26). Represents the economic injury of freezing a family's daily bread. | Ministry of Rural Development, Govt. of India ([https://nrega.nic.in](https://nrega.nic.in)) |
+| **Grounded Parameter: Stipend Cap** | **₹3,000**: Grounded in 50% of the Tamil Nadu State Disaster Response Fund (SDRF) Cyclone Michaung emergency flood-relief cash grant (₹6,000 per affected household) for immediate 48-hour household survival. | Government of Tamil Nadu (Disaster Management, [https://tnsdma.tn.gov.in](https://tnsdma.tn.gov.in) G.O. Ms. No. 587) |
 
 ---
 
@@ -20,8 +20,19 @@
 ### Q1: Isn't the data synthetic?
 **Answer:** Yes, this is transparently disclosed. PaySim (Kaggle) and OpenFEMA disaster declarations are genuine, public datasets. PaySim provides base financial balance dynamics, and OpenFEMA provides historical disaster declarations and severity levels. Individual disaster displacement patterns and adaptive syndicate attacks are generated via a deterministic, reproducible synthetic pipeline (`data/generate.py`). We showcase the algorithmic decision architecture, cost-sensitive tradeoffs, and hardware efficiency on IBM LinuxONE, not fabricated production accuracy claims.
 
-### Q2: Who decides $\alpha, \beta$, and the Survival Stipend Cap?
-**Answer:** These are institutional policy parameters set by bank risk and compliance committees. Rather than picking arbitrary magic numbers, we grounded $\beta$ (the human cost of an unwarranted freeze) in the official Tamil Nadu rural minimum daily wage (₹345/day), and anchored the survival stipend cap (₹3,000) in published emergency flood-relief cash norms. Our Policy Console allows bank risk officers to adjust these values dynamically and view the live Pareto frontier.
+### Q2: Who decides $\alpha, \beta$, and the Survival Stipend Cap? How is harm calculated?
+**Answer:** These are institutional policy parameters set by bank risk and compliance committees:
+* $\beta = ₹345/\text{day}$ is grounded in the official Tamil Nadu rural minimum daily wage published by the Ministry of Rural Development ([https://nrega.nic.in](https://nrega.nic.in)).
+* $\text{Cap}_{\text{survival}} = ₹3,000$ is grounded in 50% of the Tamil Nadu SDRF Cyclone Michaung emergency flood relief cash grant ([https://tnsdma.tn.gov.in](https://tnsdma.tn.gov.in)).
+* **Harm Calculation:** The expected societal harm differential is evaluated strictly in Indian Rupees (₹) as:
+  $$\Delta H = H_{\text{fraud}} - H_{\text{hold}}$$
+  where:
+  - $H_{\text{fraud}} = \text{Amount} \times P(\text{Fraud})$ is the expected financial loss to the institution or victim if a fraudulent transaction is released.
+  - $H_{\text{hold}} = \beta \times (1 + \text{severity\_tier}) \times (1 - P(\text{Fraud}))$ is the humanitarian harm inflicted on a legitimate family if their sustenance funds are frozen during a disaster.
+  - If $\Delta H > \tau$, fraud risk dominates and the payment is held (`HOLD`).
+  - If $\Delta H < -\tau$, wrongful freeze harm dominates and the payment is immediately released (`RELEASE`).
+  - If $|\Delta H| \le \tau$ (or if split conformal prediction outputs `{legit, fraud}`), the decision is ambiguous: the system triggers `REVIEW`, guaranteeing an immediate survival payout of $\min(\text{Amount}, ₹3,000)$ while holding the remainder in 48-hour escrow.
+Our Policy Console allows bank risk officers to adjust these values dynamically and view the live Pareto frontier.
 
 ### Q3: Isn't NYAYA just a set of hard-coded `if-else` rules?
 **Answer:** Absolutely not. NYAYA features two learned machine learning models:

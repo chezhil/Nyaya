@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NYAYA — Disaster-Aware Fraud Decisions on IBM LinuxONE</title>
   
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Tailwind CSS CDN (Pinned) -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- Chart.js CDN (Pinned) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <!-- Custom Institutional Stylesheet -->
   <link rel="stylesheet" href="styles.css">
 
@@ -89,7 +89,7 @@
       <div class="flex items-center space-x-3">
         <span>Security: <strong class="text-slate-300 font-bold" id="hwSecurity">SELinux Enforcing · Rootless Podman</strong></span>
         <span class="text-slate-700">•</span>
-        <span>Latency: <strong class="text-emerald-400 font-bold" id="hwLatency">3.72ms</strong></span>
+        <span>Latency: <strong class="text-emerald-400 font-bold" id="hwLatency">—</strong></span>
       </div>
     </div>
   </header>
@@ -131,14 +131,14 @@
       <!-- Headline Metric Banner (#20) -->
       <div class="bg-gradient-to-r from-blue-950/80 via-indigo-950/60 to-purple-950/80 border border-blue-700/60 rounded-xl p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-5">
         <div>
-          <span class="text-[10px] font-mono uppercase tracking-widest text-blue-300 font-bold bg-blue-900/80 px-2.5 py-0.5 rounded-full border border-blue-600">Guaranteed Headline Metric (#20)</span>
+          <span class="text-[10px] font-mono uppercase tracking-widest text-blue-300 font-bold bg-blue-900/80 px-2.5 py-0.5 rounded-full border border-blue-600">Design Target (#20)</span>
           <h2 class="text-2xl font-black text-white mt-1.5 flex items-center flex-wrap gap-2">
             Displaced Victims Left with ₹0:
-            <span class="text-rose-400 line-through">Legacy 44.2%</span>
+            <span class="text-rose-400 text-xs font-normal font-sans">(Legacy: Awaiting live comparative run)</span>
             <span class="text-emerald-400 font-extrabold text-3xl">NYAYA 0.0%</span>
           </h2>
           <p class="text-xs text-slate-300 mt-1">
-            <strong>Guaranteed by Survival Stipend Design:</strong> In an active disaster zone, NYAYA never freezes an innocent victim to ₹0. It disburses an immediate ₹3,000 liquid micro-stipend for food and pharmacy needs, buffering the balance.
+            <strong>Guaranteed by Survival Stipend Design:</strong> Under CLAUSE-02, any transaction inside an active disaster corridor evaluated under uncertainty disburses an immediate liquid micro-stipend (up to configured Cap_survival) rather than freezing the victim to ₹0. Legacy baseline numbers require live benchmark execution.
           </p>
         </div>
 
@@ -195,18 +195,18 @@
           <div class="grid grid-cols-3 gap-2.5 text-center">
             <div class="metric-box border-rose-900/50">
               <div class="text-[11px] text-slate-400">Victims Frozen</div>
-              <div id="legacyFreezeCount" class="text-xl font-bold font-mono text-rose-400 mt-1">2</div>
-              <div id="legacyFreezePct" class="text-[10px] text-rose-500 font-mono">34.0% false freeze</div>
+              <div id="legacyFreezeCount" class="text-xl font-bold font-mono text-rose-400 mt-1">—</div>
+              <div id="legacyFreezePct" class="text-[10px] text-rose-500 font-mono">Awaiting Live Run</div>
             </div>
             <div class="metric-box">
               <div class="text-[11px] text-slate-400">Cash Available</div>
-              <div id="legacyCashAvailable" class="text-base font-bold font-mono text-slate-300 mt-1">₹24,000</div>
-              <div class="text-[10px] text-slate-500 font-mono">severely throttled</div>
+              <div id="legacyCashAvailable" class="text-base font-bold font-mono text-slate-300 mt-1">—</div>
+              <div class="text-[10px] text-slate-500 font-mono">Awaiting Live Run</div>
             </div>
             <div class="metric-box">
               <div class="text-[11px] text-slate-400">Fraud Bleed</div>
-              <div id="legacyBleedAmount" class="text-base font-bold font-mono text-amber-400 mt-1">₹0</div>
-              <div class="text-[10px] text-slate-500 font-mono">syndicate drain</div>
+              <div id="legacyBleedAmount" class="text-base font-bold font-mono text-amber-400 mt-1">—</div>
+              <div class="text-[10px] text-slate-500 font-mono">Awaiting Live Run</div>
             </div>
           </div>
 
@@ -236,16 +236,16 @@
             <div class="metric-box border-emerald-900/60 bg-emerald-950/20">
               <div class="text-[11px] text-emerald-300">Victims Left ₹0</div>
               <div id="nyayaZeroVictims" class="text-xl font-bold font-mono text-emerald-400 mt-1">0.0%</div>
-              <div class="text-[10px] text-emerald-500 font-mono">Guaranteed by Design</div>
+              <div class="text-[10px] text-emerald-500 font-mono">Design Target (Stipend)</div>
             </div>
             <div class="metric-box border-blue-900/50">
               <div class="text-[11px] text-slate-400">Emergency Cash</div>
-              <div id="nyayaCashAvailable" class="text-base font-bold font-mono text-emerald-400 mt-1">₹24,000</div>
-              <div id="nyayaStipendsDisbursed" class="text-[10px] text-emerald-500 font-mono">0 micro-stipends</div>
+              <div id="nyayaCashAvailable" class="text-base font-bold font-mono text-emerald-400 mt-1">—</div>
+              <div id="nyayaStipendsDisbursed" class="text-[10px] text-emerald-500 font-mono">Awaiting Replay Run</div>
             </div>
             <div class="metric-box border-indigo-900/50">
               <div class="text-[11px] text-slate-400">Syndicates Caught</div>
-              <div id="nyayaBlockedCount" class="text-base font-bold font-mono text-indigo-400 mt-1">0 rings blocked</div>
+              <div id="nyayaBlockedCount" class="text-base font-bold font-mono text-indigo-400 mt-1">—</div>
               <div class="text-[10px] text-indigo-500 font-mono">PyTorch NNPA Graph</div>
             </div>
           </div>
@@ -339,17 +339,12 @@
                 <label class="text-slate-400">Geo Shift (km):</label>
                 <input type="number" id="inputGeoShift" value="82.5" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
               </div>
-              <div>
-                <label class="text-slate-400">Fan-In (15m):</label>
-                <input type="number" id="inputFanIn" value="1" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
-              </div>
-              <div class="col-span-2">
-                <label class="text-slate-400">Mule Centrality Index (MCI 0.0-1.0):</label>
-                <input type="number" step="0.01" min="0" max="1" id="inputMci" value="0.02" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
+              <div class="col-span-2 pt-1 text-[11px] text-slate-500 font-mono">
+                * Note: Recipient graph features (fan-in velocity, MCI) are computed server-side on LinuxONE per CONTRACTS.md §7.
               </div>
             </div>
 
-            <button onclick="evaluateCustomForm()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-mono font-bold tracking-wider uppercase shadow">
+            <button id="btnRunCustomEvaluate" onclick="evaluateCustomForm()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-mono font-bold tracking-wider uppercase shadow">
               Run Real-Time LinuxONE Decision
             </button>
           </div>
@@ -358,7 +353,7 @@
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
             <div class="flex justify-between items-center">
               <span class="text-xs font-mono text-slate-400 font-bold uppercase tracking-wider">Engine Output</span>
-              <span class="text-[10px] font-mono text-slate-400">Latency: <strong id="xrayLatency" class="text-emerald-400">3.42 ms</strong></span>
+              <span class="text-[10px] font-mono text-slate-400">Latency: <strong id="xrayLatency" class="text-emerald-400">—</strong></span>
             </div>
 
             <!-- Giant Decision Badge -->
@@ -595,7 +590,7 @@
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
           <div class="flex justify-between items-center">
             <h3 class="text-xs font-mono text-slate-300 uppercase tracking-wider font-bold">Chart 2: Probability Calibration Plot (#17)</h3>
-            <span class="text-[11px] font-mono text-emerald-400">Brier: 0.112 &rarr; 0.041</span>
+            <span class="text-[11px] font-mono text-emerald-400">Target Brier: &lt; 0.05</span>
           </div>
           <div class="chart-container-md">
             <canvas id="chartCalibration"></canvas>
@@ -612,9 +607,9 @@
         <div class="flex justify-between items-center">
           <div>
             <span class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">Ethical AI / Responsible Banking (#7)</span>
-            <h3 class="text-base font-bold text-white mt-0.5">Demographic Income-Band Fairness Audit (CLAUSE-06)</h3>
+            <h3 class="text-base font-bold text-white mt-0.5">Demographic Income-Band Fairness Audit (Design Specification Benchmark)</h3>
           </div>
-          <span class="text-xs font-mono px-3 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">Parity Ratio &le; 1.25x Passed ✅</span>
+          <span class="text-xs font-mono px-3 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">Target Parity &le; 1.25x ✅</span>
         </div>
 
         <p class="text-xs text-slate-400 font-sans">
@@ -756,7 +751,7 @@
         <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
           <div class="flex justify-between items-center border-b border-slate-800 pb-3">
             <h4 class="text-xs font-mono text-slate-300 uppercase tracking-wider font-bold">Section C: Tamper-Evident CPACF Ledger</h4>
-            <span id="ledgerIntegrityBadge" class="px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-xs font-mono font-bold">CHAIN VALID ✅</span>
+            <span id="ledgerIntegrityBadge" class="px-2.5 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-700 text-xs font-mono font-bold">AWAITING VERIFICATION ⚠️</span>
           </div>
 
           <p class="text-xs text-slate-400 leading-relaxed font-sans">
@@ -766,16 +761,16 @@
           <!-- Ledger Hardware Performance Metrics -->
           <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs font-mono space-y-2">
             <div class="flex justify-between">
-              <span class="text-slate-400">CPACF SHA-256 Measured:</span>
-              <span class="text-emerald-400 font-bold">4.4 GB/s</span>
+              <span class="text-slate-400">CPACF Hardware SHA-256:</span>
+              <span class="text-emerald-400 font-bold">~4.4 GB/s (z16)</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-400">CPACF AES-256-GCM Measured:</span>
-              <span class="text-emerald-400 font-bold">12.5 GB/s</span>
+              <span class="text-slate-400">CPACF Hardware AES-256-GCM:</span>
+              <span class="text-emerald-400 font-bold">~12.5 GB/s (z16)</span>
             </div>
             <div class="flex justify-between">
               <span class="text-slate-400">Verified Chained Blocks:</span>
-              <span class="text-white font-bold">1,482 Blocks</span>
+              <span class="text-white font-bold" id="valVerifiedBlocks">—</span>
             </div>
           </div>
 
@@ -864,14 +859,14 @@
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
         <div class="flex justify-between items-center border-b border-slate-800 pb-3">
           <div>
-            <span class="text-xs font-mono text-indigo-400 font-bold uppercase tracking-wider">Hardware Benchmark (#23)</span>
-            <h3 class="text-base font-bold text-white mt-0.5">Section D: IBM Telum NNPA vs. Standard CPU Batch Throughput</h3>
+            <span class="text-xs font-mono text-indigo-400 font-bold uppercase tracking-wider">Architecture Sizing Benchmark (#23)</span>
+            <h3 class="text-base font-bold text-white mt-0.5">Section D: IBM Telum NNPA vs. Standard CPU Throughput Reference</h3>
           </div>
-          <span class="text-xs font-mono px-3 py-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-700 font-bold">10,000 Recipient Batch</span>
+          <span class="text-xs font-mono px-3 py-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-700 font-bold">10,000 Recipient Batch Sizing</span>
         </div>
 
         <p class="text-xs text-slate-400 font-sans">
-          Measured on IBM LinuxONE (3 vCPUs, 7.3 GiB RAM) comparing standard CPU execution against the IBM Telum Neural Network Processing Assist (NNPA) accelerator for Model B PyTorch inference.
+          Architecture target benchmark on IBM LinuxONE / z16 hardware (3 vCPUs, 7.3 GiB RAM) comparing standard CPU execution against IBM Telum Integrated AI Accelerator (NNPA) for Model B PyTorch inference.
         </p>
 
         <div class="overflow-x-auto">

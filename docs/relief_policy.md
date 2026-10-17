@@ -16,8 +16,8 @@ Disaster-zone leniency and provisional micro-stipend disbursements apply strictl
 
 ### CLAUSE-05 Grounded Policy Parameters (Beta & Stipend Cap)
 Institutional risk parameters are anchored directly to official Indian economic and disaster management benchmarks rather than arbitrary constants:
-- **Wrongful Freeze Harm Base (`beta = ₹345`):** Grounded in one day of the official notified rural minimum daily wage for Tamil Nadu (₹345/day under the 2026–27 VB-G RAM G / MGNREGS notification; revised from ₹336/day in 2025–26). This reflects the immediate economic shock experienced when sustenance liquidity is frozen.
-- **Survival Stipend Cap (`Cap_survival = ₹3,000`):** Grounded in 50% of the Tamil Nadu State Disaster Response Fund (SDRF) Cyclone Michaung flood-relief cash assistance (₹6,000 per family) for immediate 48-hour household survival.
+- **Wrongful Freeze Harm Base (`beta = ₹345`):** Grounded in one day of the official notified rural minimum daily wage for Tamil Nadu (₹345/day under the 2026–27 VB-G RAM G / MGNREGS notification; revised from ₹336/day in 2025–26, published by the Ministry of Rural Development, Government of India: [https://nrega.nic.in](https://nrega.nic.in)). This reflects the immediate economic shock experienced when sustenance liquidity is frozen.
+- **Survival Stipend Cap (`Cap_survival = ₹3,000`):** Grounded in 50% of the Tamil Nadu State Disaster Response Fund (SDRF) Cyclone Michaung flood-relief cash assistance (₹6,000 per family) for immediate 48-hour household survival, notified by the Revenue and Disaster Management Department, Government of Tamil Nadu: [https://tnsdma.tn.gov.in](https://tnsdma.tn.gov.in) (G.O. Ms. No. 587).
 
 ### CLAUSE-06 Demographic & Income-Band Fairness
 To uphold algorithmic justice and ethical financial inclusion, socio-economic proxies—including historical average balance, credit bureau rating, smartphone device price tier, or rural branch code—are strictly excluded as model features. Freeze and REVIEW rates across income bands (<₹15,000, ₹15,000–₹50,000, and >₹50,000) are audited continuously to guarantee compliance within a 1.25x parity ratio under equivalent disaster conditions.

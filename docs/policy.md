@@ -37,8 +37,8 @@
 
 ### CLAUSE-05: Grounded Policy Parameters (Beta & Stipend Cap)
 5.1. Rather than utilizing arbitrary mathematical constants, institutional risk parameters are anchored to published Indian economic and disaster management benchmarks:
-   - **Wrongful Freeze Harm Base (`beta = ₹345`):** Grounded in one day of the official notified rural minimum daily wage for Tamil Nadu (notified under the MGNREGS / VB-G RAM G framework at ₹345/day for 2026–27; revised from ₹336/day in 2025–26). This quantifies the economic injury inflicted on a vulnerable citizen when legitimate funds are locked for 24 hours.
-   - **Survival Stipend Cap (`Cap_survival = ₹3,000`):** Grounded in 50% of the Tamil Nadu State Disaster Response Fund (SDRF) Cyclone Michaung emergency flood-relief cash grant (₹6,000 per affected household), providing guaranteed liquidity for immediate 48-hour family survival needs.
+   - **Wrongful Freeze Harm Base (`beta = ₹345`):** Grounded in one day of the official notified rural minimum daily wage for Tamil Nadu (₹345/day under the 2026–27 VB-G RAM G / MGNREGS notification; revised from ₹336/day in 2025–26, published by the Ministry of Rural Development, Government of India: [https://nrega.nic.in](https://nrega.nic.in)). This quantifies the economic injury inflicted on a vulnerable citizen when legitimate funds are locked for 24 hours.
+   - **Survival Stipend Cap (`Cap_survival = ₹3,000`):** Grounded in 50% of the Tamil Nadu State Disaster Response Fund (SDRF) Cyclone Michaung emergency flood-relief cash grant (₹6,000 per affected household) for immediate 48-hour household survival, notified by the Revenue and Disaster Management Department, Government of Tamil Nadu: [https://tnsdma.tn.gov.in](https://tnsdma.tn.gov.in) (G.O. Ms. No. 587).
 
 ---
 
