@@ -5,7 +5,8 @@
     delta = H_F - H_H
 
     HOLD    P(mule) >= theta_mule, or delta >= tau
-    REVIEW  not HOLD, and (conformal set is {legit, fraud} or |delta| < tau): pay the stipend now, escrow the rest
+    REVIEW  not HOLD, and (conformal set is {legit, fraud} or delta > -tau_review): pay the stipend now, escrow the rest
+            (tau_review defaults to tau, which is the plan's |delta| < tau band; it can be set lower to narrow it)
     RELEASE otherwise
 
 S is the zone severity tier (0 outside a declared zone). A REVIEW whose amount already fits inside the stipend
@@ -41,12 +42,13 @@ def decide(scores: dict, tx: dict, policy: dict) -> dict:
     h_fraud, h_hold = harms(p, tx, policy)
     delta = h_fraud - h_hold
     tau = float(policy["tau"])
+    tau_review = float(policy.get("tau_review", tau))  # plan: |delta| < tau, i.e. tau_review == tau
     cap = float(policy["stipend_cap"])
     uncertain = len(scores.get("conformal_set", [])) > 1
 
     if float(scores.get("p_mule", 0.0)) >= float(policy["theta_mule"]) or delta >= tau:
         decision, release_now = "HOLD", 0.0
-    elif (uncertain or abs(delta) < tau) and amount > cap:
+    elif (uncertain or delta > -tau_review) and amount > cap:
         decision, release_now = "REVIEW", cap
     else:
         decision, release_now = "RELEASE", amount
