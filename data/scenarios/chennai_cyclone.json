@@ -1,0 +1,16 @@
+{
+  "name": "Chennai cyclone (synthetic preset)",
+  "synthetic": true,
+  "note": "Illustrative hour-by-hour severity curve for the Cyclone Replay. Not a record of any real event.",
+  "zone": "Chennai",
+  "hours": 72,
+  "severity_by_hour": [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4,
+    5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4,
+    4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+  ],
+  "start_hour_of_day": 12
+}

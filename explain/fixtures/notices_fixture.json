@@ -1,0 +1,6 @@
+{
+  "_note": "TEST FIXTURE (English only). The real texts, including Tamil and Hindi written by native speakers, go in docs/notices.json.",
+  "RELEASE": {"en": "Your payment of {amount} has been sent."},
+  "REVIEW": {"en": "{release_now} has been sent now so you can buy essentials. The remaining {escrow} is safely held and will reach you within {hours} hours. Tap 'Appeal' if this is urgent."},
+  "HOLD": {"en": "Your payment of {amount} is on hold while we check it. Tap 'Appeal' to talk to us."}
+}
