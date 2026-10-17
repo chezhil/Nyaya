@@ -39,6 +39,13 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(result["max_min_freeze_ratio"], 1.0)
         self.assertEqual(result["by_sender_income_band"]["mid"]["review_rate"], 0.0)
 
+    def test_fairness_legitimate_only_excludes_fraud_rows(self):
+        df = pd.DataFrame({"sender_income_band": ["low", "low", "high", "high"], "is_fraud": [1, 0, 0, 0]})
+        decisions = pd.DataFrame({"decision": ["HOLD", "RELEASE", "RELEASE", "RELEASE"]})
+        result = _fairness(df, decisions)
+        self.assertEqual(result["by_sender_income_band"]["low"]["freeze_rate"], 0.5)
+        self.assertEqual(result["legitimate_only"]["by_sender_income_band"]["low"]["freeze_rate"], 0.0)
+
     def test_ratio_zero_denominator_is_explicitly_unbounded(self):
         self.assertIsNone(_ratio([0.0, 0.2]))
 

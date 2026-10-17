@@ -165,6 +165,18 @@ def _ratio(values: Iterable[float]) -> float | None:
 
 
 def _fairness(df: pd.DataFrame, decisions: pd.DataFrame) -> dict:
+    """Two views. `all_payments` (as first built) mixes in fraud from compromised accounts, whose owners skew
+    low-income, so it partly measures who gets defrauded. `legitimate_only` is false-positive parity: how often
+    honest payers in each band are frozen or reviewed, the usual fairness test for a fraud model."""
+    out = _fairness_rates(df, decisions)
+    if "is_fraud" in df.columns:
+        legit = (df["is_fraud"].to_numpy() == 0)
+        out["legitimate_only"] = _fairness_rates(df[legit].reset_index(drop=True),
+                                                 decisions[legit].reset_index(drop=True))
+    return out
+
+
+def _fairness_rates(df: pd.DataFrame, decisions: pd.DataFrame) -> dict:
     audit = pd.DataFrame({
         "band": df["sender_income_band"].fillna("").astype(str),
         "decision": decisions["decision"].astype(str),
