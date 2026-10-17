@@ -43,7 +43,19 @@ def test_mule_signal_present(small):
     mule = tx[tx.population == "syndicate"]
     normal = tx[tx.population == "normal"]
     assert mule["fan_in_15m"].median() > 5 * max(1, normal["fan_in_15m"].median())
-    assert mule["account_age_days"].median() < 60 < normal["account_age_days"].median()
+    assert mule["account_age_days"].median() < normal["account_age_days"].median()
+
+
+def test_benign_overlap_exists(small):
+    """v2: legitimate accounts that share devices/networks, are new, or collect and forward money fast."""
+    tx, acc = small
+    legit = tx[tx.is_mule_recipient == 0]
+    assert (legit["device_reuse_density"] >= 3).any()
+    assert (legit["account_age_days"] < 60).any()
+    col = tx[tx.population == "collector_donation"]
+    assert len(col) and col["fan_in_15m"].max() >= 5
+    disp = tx[tx.population == "displaced"]
+    assert 0.1 < (disp["newbalanceOrig"] <= 0.15 * disp["oldbalanceOrg"]).mean() < 0.35  # some spend it all
 
 
 @pytest.mark.parametrize("variant,feature", [("smurf", "fan_in_15m"), ("device_spoof", "device_reuse_density"),

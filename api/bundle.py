@@ -24,6 +24,8 @@ def _sigmoid(x):
 
 
 def conformal_set(p_fraud: float, qhat: float | None) -> list[str]:
+    """Split conformal set. With two labels and qhat < 0.5 (any accurate model at 90% coverage) a set can't
+    hold both labels; the uncertain middle shows up as an EMPTY set instead. Both mean "not sure"."""
     if qhat is None:
         return ["legit"] if p_fraud < 0.5 else ["fraud"]
     s = []
@@ -31,7 +33,7 @@ def conformal_set(p_fraud: float, qhat: float | None) -> list[str]:
         s.append("legit")
     if 1 - p_fraud <= qhat:
         s.append("fraud")
-    return s or (["legit"] if p_fraud < 0.5 else ["fraud"])
+    return s
 
 
 def _top3(names, values, contribs) -> list[dict]:
