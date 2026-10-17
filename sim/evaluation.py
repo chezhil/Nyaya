@@ -69,16 +69,16 @@ def _average_precision(y_true, scores) -> float:
     return float(np.sum(np.diff(np.r_[0.0, recall]) * precision))
 
 
-def _fixed_sample(df: pd.DataFrame, counts: dict[str, int], seed: int) -> pd.DataFrame:
-    """Sample unique rows by population from Model A's held-out split."""
-    test = df.iloc[_test_positions(df)]
+def _fixed_sample(df: pd.DataFrame, counts: dict[str, int], seed: int, *, held_out: bool = True) -> pd.DataFrame:
+    """Sample unique population rows, optionally restricted to Model A's test split."""
+    test = df.iloc[_test_positions(df)] if held_out else df
     rng = np.random.default_rng(seed)
     chosen: list[np.ndarray] = []
     for population, count in counts.items():
         positions = np.flatnonzero(test["population"].to_numpy() == population)
         if len(positions) < count:
             raise ValueError(
-                f"held-out test split has {len(positions)} {population!r} rows; "
+                f"{'held-out test split' if held_out else 'dataset'} has {len(positions)} {population!r} rows; "
                 f"{count} unique rows are required"
             )
         chosen.append(rng.choice(positions, size=count, replace=False))
@@ -87,20 +87,12 @@ def _fixed_sample(df: pd.DataFrame, counts: dict[str, int], seed: int) -> pd.Dat
 
 
 def _suite_frame(params: dict, counts: dict[str, int], seed: int) -> tuple[pd.DataFrame, str]:
-    """The evaluation suite. Preferred: an independent file generated with a different seed (`suite_tag`, default
-    suite_v2), so every row is held out from training, calibration and tuning. Fallback: Model A's test split."""
-    suite_tag = params.get("suite_tag", "suite_v2")
-    if suite_tag and (_data_dir(params) / f"nyaya_{suite_tag}.csv.gz").exists():
-        df = _read_payments(params, str(suite_tag))
-        rng = np.random.default_rng(seed)
-        chosen = []
-        for population, count in counts.items():
-            positions = np.flatnonzero(df["population"].to_numpy() == population)
-            if len(positions) < count:
-                raise ValueError(f"{suite_tag} has {len(positions)} {population!r} rows; {count} are required")
-            chosen.append(rng.choice(positions, size=count, replace=False))
-        return df.iloc[rng.permutation(np.concatenate(chosen))].reset_index(drop=True), f"independent file {suite_tag}"
-    return _fixed_sample(_read_payments(params), counts, seed), "models.train_a test split"
+    """Sample the independent evaluation file; never silently fall back to training data."""
+    suite_tag = params.get("suite_tag", "eval")
+    if not suite_tag:
+        raise ValueError("suite_tag is required for evaluation; use pareto for held-out sensitivity")
+    df = _read_payments(params, str(suite_tag))
+    return _fixed_sample(df, counts, seed, held_out=False), f"independent file {suite_tag}"
 
 
 def _require_real_bundle(ctx) -> None:
@@ -241,7 +233,7 @@ def _evaluate_suite(ctx, df: pd.DataFrame, policy: dict, naive_cap: float) -> di
 
 
 def simulate(ctx, params: dict) -> dict:
-    """Run the fixed 10,000-row held-out suite and all headline audits."""
+    """Run the fixed 10,000-row independent suite and all headline audits."""
     _require_real_bundle(ctx)
     params = dict(params or {})
     seed = int(params.get("seed", SEED))
@@ -273,7 +265,9 @@ def pareto(ctx, params: dict) -> dict:
     _require_real_bundle(ctx)
     params = dict(params or {})
     sample_counts = params.get("counts", SUITE_COUNTS)
-    df, source = _suite_frame(params, {k: int(v) for k, v in sample_counts.items()}, int(params.get("seed", SEED)))
+    df = _fixed_sample(_read_payments(params), {k: int(v) for k, v in sample_counts.items()},
+                       int(params.get("seed", SEED)))
+    source = f"models.train_a test split ({params.get('tag', 'v2')})"
     base = {**ctx.policy, **dict(params.get("policy", {}))}
     grids = {
         "alpha": _grid(params, "alpha", float(base["alpha"]), (0.5, 0.75, 1.0, 1.25, 1.5)),
@@ -298,21 +292,25 @@ def pareto(ctx, params: dict) -> dict:
             policy = {**base, name: value}
             decisions = _decisions(ctx, df, scores, policy)
             metrics = _metrics(df, decisions, decisions, scores)
+            point_references = {
+                "legacy": _metrics(df, legacy, decisions, scores),
+                "naive_relaxed": _metrics(df, naive, decisions, scores),
+            }
             loses = [
-                baseline for baseline, result in references.items()
+                baseline for baseline, result in point_references.items()
                 if metrics["total_expected_harm_rupees"] > result["total_expected_harm_rupees"]
             ]
-            points.append({"parameter": name, "value": value, "metrics": metrics, "loses_to": loses})
+            points.append({"parameter": name, "value": value, "metrics": metrics,
+                           "baselines": point_references, "loses_to": loses})
     return {"suite_rows": len(df), "suite_source": source, "base_policy": base, "grids": grids,
             "baselines": references, "points": points}
 
 
 def _variant_detection(ctx, df: pd.DataFrame, policy: dict, variant: str) -> dict:
-    positions = _test_positions(df)
-    test = df.iloc[positions]
+    test = df
     target = test[(test["population"] == "syndicate") & (test["variant"] == variant)].reset_index(drop=True)
     if target.empty:
-        raise ValueError(f"held-out data contains no syndicate rows for variant {variant!r}")
+        raise ValueError(f"evaluation data contains no syndicate rows for variant {variant!r}")
     scores = _score(ctx, target)
     decisions = _decisions(ctx, target, scores, policy)
     detected = decisions["decision"].isin(["HOLD", "REVIEW"])
@@ -339,12 +337,12 @@ def _variant_detection(ctx, df: pd.DataFrame, policy: dict, variant: str) -> dic
 
 
 def redteam(ctx, params: dict) -> dict:
-    """Evaluate held-out adaptive syndicate variants generated by data.generate."""
+    """Evaluate independent adaptive syndicate datasets generated by data.generate."""
     _require_real_bundle(ctx)
     params = dict(params or {})
     policy = {**ctx.policy, **dict(params.get("policy", {}))}
     tags = {**DEFAULT_TAGS, **dict(params.get("tags", {}))}
-    base_df = _read_payments(params, str(params.get("base_tag", params.get("tag", "v2"))))
+    base_df = _read_payments(params, str(params.get("base_tag", params.get("suite_tag", "eval"))))
     base_variant = str(params.get("base_variant", "base"))
     base = _variant_detection(ctx, base_df, policy, base_variant)
     results = []
