@@ -1,6 +1,7 @@
 """Expected-harm decision table from the plan (§5.6). Used only until Kaustub's engine/ package lands.
 
-One addition: a REVIEW whose amount fits inside the stipend cap would escrow nothing, so it is a RELEASE.
+Additions: a REVIEW whose amount fits inside the stipend cap would escrow nothing, so it is a RELEASE; and an
+empty conformal set counts as uncertain, like {legit, fraud} (see api.bundle.conformal_set).
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ def decide(scores: dict, tx: dict, policy: dict) -> dict:
     tau = float(policy["tau"])
     if float(scores.get("p_mule", 0.0)) >= float(policy["theta_mule"]) or delta >= tau:
         decision, release_now = "HOLD", 0.0
-    elif (len(scores.get("conformal_set", [])) > 1 or abs(delta) < tau) and amount > float(policy["stipend_cap"]):
+    elif (len(scores.get("conformal_set", ["legit"])) != 1 or abs(delta) < tau) and amount > float(policy["stipend_cap"]):
         decision, release_now = "REVIEW", float(policy["stipend_cap"])
     else:
         decision, release_now = "RELEASE", amount

@@ -40,7 +40,7 @@ All written on the LinuxONE server to `~/shared/nyaya/artifacts/` (git-ignored).
 | `model_a.json` | `xgboost.Booster.save_model()` JSON, binary:logistic |
 | `model_a_meta.json` | `{"version": str, "features": [names, in training order], "legacy_threshold": float \| null}` — features must come from `data/schema.md` §Model A features. `legacy_threshold` = raw-score threshold at 1% FPR on validation for the legacy baseline |
 | `calibration.json` | isotonic regression: `{"x": IsotonicRegression.X_thresholds_, "y": IsotonicRegression.y_thresholds_}` |
-| `conformal.json` | `{"qhat": float, "alpha": 0.1}` — split conformal on calibrated P(fraud), score = 1 − p(true label). Set = {legit if p_fraud ≤ qhat} ∪ {fraud if 1 − p_fraud ≤ qhat} |
+| `conformal.json` | `{"qhat": float, "alpha": 0.1}` — split conformal on calibrated P(fraud), score = 1 − p(true label). Set = {legit if p_fraud ≤ qhat} ∪ {fraud if 1 − p_fraud ≤ qhat}. **Any set that is not exactly one label (empty or both) means "uncertain" → REVIEW.** With two labels a set can only hold both when qhat ≥ 0.5; an accurate model at 90% coverage gives qhat < 0.5, so its uncertain cases come out empty |
 | `model_b.pt` | `torch.save(model.state_dict())` of exactly `nn.Sequential(nn.Linear(7,32), nn.ReLU(), nn.Linear(32,16), nn.ReLU(), nn.Linear(16,1))`, output = logit |
 | `model_b_meta.json` | `{"version": str, "features": [7 names from data/schema.md §Model B], "mean": [7], "std": [7]}` (standardise before the forward pass) |
 
@@ -52,7 +52,8 @@ The API (`api/bundle.py`) loads these. If any are missing it falls back to `Stub
 ```python
 # engine/__init__.py must export:
 def decide(scores: dict, tx: dict, policy: dict) -> dict:
-    """scores = {"p_fraud": float, "p_mule": float, "conformal_set": ["legit"] | ["fraud"] | ["legit","fraud"]}
+    """scores = {"p_fraud": float, "p_mule": float, "conformal_set": ["legit"] | ["fraud"] | ["legit","fraud"] | []}
+    (empty or two labels = uncertain)
     tx = the /evaluate request after defaults are filled (data/schema.md payment columns)
     policy = api/policy_defaults.json merged with any request overrides
     returns {"decision": "RELEASE"|"REVIEW"|"HOLD", "release_now": float, "escrow": float,

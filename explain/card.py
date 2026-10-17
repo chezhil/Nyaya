@@ -43,7 +43,7 @@ def template_card(f: dict) -> str:
     ctx = f"{f['merchant_category']} payment at {f['hour']:02d}:00"
     if f["in_disaster_zone"]:
         ctx += f" inside a disaster zone (severity {f['severity_tier']})"
-    unsure = " The model is unsure (conformal set: legit and fraud)." if len(f["conformal_set"]) > 1 else ""
+    unsure = " The model is unsure (its conformal set is not a single label)." if len(f["conformal_set"]) != 1 else ""
     reasons = "; ".join(f"{r['factor']} ({r['direction']})" for r in f["reasons"]) or "none"
     clause = f" Policy {f['clause_id']}: {f['clause_title']}." if f.get("clause_id") else ""
     cf = f" {f['counterfactual']}" if f.get("counterfactual") else ""

@@ -54,6 +54,16 @@ def test_review_always_releases_stipend():
     assert d["release_now"] == pol["stipend_cap"] and d["escrow"] == 25000 - pol["stipend_cap"]
 
 
+def test_empty_conformal_set_means_uncertain():
+    from api.bundle import conformal_set
+    assert conformal_set(0.5, 0.02) == []  # neither label within qhat: the uncertain middle
+    assert conformal_set(0.01, 0.02) == ["legit"] and conformal_set(0.99, 0.02) == ["fraud"]
+    tx = {"amount": 25000, "severity_tier": 5, "in_disaster_zone": 1, "merchant_category": "clinic"}
+    pol = {**POLICY, "tau": 1.0}  # harm gap alone would not trigger REVIEW
+    d = fallback_policy.decide({"p_fraud": 0.02, "p_mule": 0.0, "conformal_set": []}, tx, pol)
+    assert d["decision"] == "REVIEW"
+
+
 def test_mule_override_holds():
     tx = {"amount": 500, "severity_tier": 5, "in_disaster_zone": 1, "merchant_category": "pharmacy"}
     d = fallback_policy.decide({"p_fraud": 0.01, "p_mule": 0.95, "conformal_set": ["legit"]}, tx, POLICY)
