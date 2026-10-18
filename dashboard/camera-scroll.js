@@ -24,14 +24,19 @@
       const signed = 2*phase - 1;
       const dir = i%2 ? -1 : 1;
       const heightScale = Math.min(1.25, Math.max(.65, bounds.height/800));
-      const envY = -signed * 53 * heightScale;
-      const envX = dir * signed * 19;
-      const zoom = lerp(1.095, 1.018, phase);
-      const imageY = -signed * 16 * heightScale;
-      const copyY = -signed * 40 * heightScale;
-      const hudY = signed * 22 * heightScale;
-      const detailX = -dir * signed * 12;
-      const detailY = -signed * 10;
+      // Gentle drift; text and cards move only slightly so their spacing stays readable.
+      const envY = -signed * 24 * heightScale;
+      const envX = dir * signed * 8;
+      // Zoom always covers the drift around this scene's origin, so the image never leaves an empty edge.
+      const [ox, oy] = origins[i].split(' ').map(v => parseFloat(v) / 100);
+      const needY = Math.abs(envY) / (Math.min(oy, 1 - oy) * Math.max(bounds.height, 1));
+      const needX = Math.abs(envX) / (Math.min(ox, 1 - ox) * Math.max(bounds.width, 1));
+      const zoom = Math.max(lerp(1.05, 1.03, phase), 1 + Math.max(needX, needY) + 0.004);
+      const imageY = -signed * 8 * heightScale;
+      const copyY = -signed * 12 * heightScale;
+      const hudY = signed * 8 * heightScale;
+      const detailX = -dir * signed * 6;
+      const detailY = -signed * 5;
       el.style.setProperty('--cinema-origin', origins[i]);
       el.style.setProperty('--cinema-x', disabled ? '0px' : envX.toFixed(1)+'px');
       el.style.setProperty('--cinema-y', disabled ? '0px' : envY.toFixed(1)+'px');
