@@ -49,7 +49,7 @@ On the independent suite: PR-AUC 0.974.
 
 `tau = 250`, `tau_review = 0`, `theta_mule = 0.8`, `alpha = 0.6`, `beta = Rs 345`, `stipend_cap = Rs 3,000`,
 `zone_hold_needs_mule = true`. Chosen from `engine_tune.json` (v2 test split); reasons in `api/policy_defaults.json`.
-β and the cap are the official figures cited in `docs/policy.md` clause 5; verify them before the video.
+β and the cap are the official figures cited, with their sources, in `docs/policy.md` clause 5 (checked 17 Oct 2026).
 
 **The zone rule.** With `zone_hold_needs_mule` on, a payment inside a declared disaster zone can be fully frozen only
 by the mule override; any other HOLD becomes a REVIEW, which releases the stipend. That is what makes "victims left

@@ -4,6 +4,10 @@ Disaster-aware fraud decisions on IBM LinuxONE · IBM Z Datathon 2026 (Real-Time
 
 > Built during the official hackathon window (17–18 Oct 2026). No solution code was written before kickoff.
 
+**Live demo (running on IBM LinuxONE):** http://148.100.109.13:8000 opens the story landing page; **Explore dashboard**
+(or `/dashboard.html`) opens the 4-tab dashboard on the real models: Cyclone Replay, Transaction X-Ray with
+Tamil/Hindi/English notices, Policy Console, Analyst Queue and Red Team.
+
 During a cyclone, flood victims pay from relief camps at 2 AM, on borrowed phones, far from home: exactly what fraud
 engines are trained to freeze. A frozen account at that moment means no food, fuel or medicine. Fraud rings know this
 and pose as victims. NYAYA decides each payment by **expected harm in rupees**, not by a fixed score cut-off, and adds
@@ -86,13 +90,38 @@ Granite's wording is not reliable: on 17 Oct, for scenario 2 (REVIEW, ₹3,000 n
 payment "was released in full". `check_output` only verifies numbers, so the dashboard shows the template first and
 Granite's text below it as an unverified draft.
 
-## Repository
+## Limitations
 
-| Folder | What | Owner |
+- **Synthetic data.** Displaced victims, mule syndicates and their red-team variants are simulated by us
+  (`data/schema.md`); PaySim-style balances and OpenFEMA declarations are the only public inputs. Nothing here is a
+  real-world accuracy claim.
+- **Baseline definition.** "Legacy" is Model A with the disaster context removed; a differently built baseline would
+  score differently, so quote the fraud-leakage gap only with that definition attached.
+- **Policy trade-off.** The zone rule protects victims at the cost of more account-takeover leakage inside declared
+  zones (above, and the model card).
+- **Not met / not faster.** The fairness target is missed; Model B is slower on the NNPA than on the CPU at this size.
+- **Granite** is slow and unreliable on 3 vCPUs; its text is shown as an unverified draft under the template card.
+- **Imagery.** The landing page's scenes are illustrative AI-generated images; one of them (`human-story.webp`) still
+  carries text from a design mock-up and is masked in the page (hidden on phones). No figure on the landing page comes
+  from that imagery; the headline number is read from the recorded evaluation suite.
+- **Demo hardening.** One shared 3-vCPU VM, plain HTTP, and analyst actions are not behind a login unless
+  `NYAYA_ANALYST_TOKEN` is set.
+
+Judge Q&A: `docs/faq.md`. Full numbers and caveats: `models/MODEL_CARD.md`.
+
+## Team and how it was built
+
+| Folder | What | Who |
 |---|---|---|
-| `api/` `ledger/` `explain/` `deploy/` `data/` | FastAPI service, ledger, explainer, pod, synthetic data | Chezhil |
-| `models/` `engine/` `sim/` `notebooks/` | Models A/B, decision engine, evaluation suite, notebooks 01–05, model card | Kaustub |
-| `dashboard/` `docs/` | 4-tab dashboard, policy, notices, FAQ | Aaditya |
+| `api/` `ledger/` `explain/` `deploy/` `data/` | FastAPI service, ledger, explainer, pod, synthetic data, integration | Chezhil |
+| `models/` `engine/` `sim/` `notebooks/` | Models A/B, decision engine, evaluation suite, notebooks 01–05, model card | Kaustub (finished by Chezhil from Kaustub's handoff, `engine/HANDOFF.md`) |
+| `dashboard/` `docs/` | 4-tab dashboard, relief policy, Tamil/Hindi/English notices, FAQ | Aaditya |
+| `dashboard/index.html` + cinematic assets, dashboard restyle | Story landing page | Abishek (`cinematic-frontend/INTEGRATION.md`) |
+
+**AI assistance (disclosed):** the team used AI coding assistants throughout: Claude Code (Chezhil, Kaustub), OpenAI
+Codex (Kaustub, `sim/`) and Google Antigravity (Kaustub's notebooks, Aaditya's dashboard). Every agent worked under the
+shared rules in `AGENTS.md` (own folders only, no invented numbers, run on the server before "done"), and the people
+above reviewed and merged the changes. All reported numbers come from code run on the LinuxONE server.
 
 Interfaces: `CONTRACTS.md`. Rules for code and agents: `AGENTS.md`. Evidence: `docs/evidence/`.
 
@@ -105,7 +134,8 @@ cd ~/shared/nyaya && git pull --ff-only && deploy/pod.sh
 curl -s http://127.0.0.1:8000/api/v1/system      # models "real", mule_device "nnpa", engine-1
 ```
 
-The dashboard is served at `/`. Port 8000 is not opened to the internet; from a laptop:
+The landing page is served at `/` and the dashboard at `/dashboard.html`. For the demo, port 8000 is open on the
+server's firewall (http://148.100.109.13:8000); without that, use an SSH tunnel from a laptop:
 
 ```bash
 ssh -N -L 8000:127.0.0.1:8000 <server>   # then open http://localhost:8000
