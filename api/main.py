@@ -79,8 +79,23 @@ class Payment(BaseModel):
     recipient: Optional[RecipientOverride] = None
 
 
+class PolicyOverrides(BaseModel):
+    """What-if overrides of api/policy_defaults.json (Policy Console). Bounded, and unknown keys are rejected,
+    so a typo or a negative stipend fails loudly instead of producing a nonsense decision."""
+    model_config = ConfigDict(extra="forbid")
+    alpha: Optional[float] = Field(default=None, ge=0, le=5)
+    beta: Optional[float] = Field(default=None, ge=0, le=1e6)
+    tau: Optional[float] = Field(default=None, ge=0, le=1e9)
+    tau_review: Optional[float] = Field(default=None, ge=0, le=1e9)
+    theta_mule: Optional[float] = Field(default=None, ge=0, le=1)
+    stipend_cap: Optional[float] = Field(default=None, ge=0, le=1e7)
+    escrow_hours: Optional[float] = Field(default=None, gt=0, le=720)
+    zone_hold_needs_mule: Optional[bool] = None
+
+
 class EvaluateRequest(Payment):
-    policy: Optional[dict] = None  # what-if overrides of api/policy_defaults.json (Policy Console)
+    # Any policy override makes the call a what-if: decided and returned, but not recorded anywhere.
+    policy: Optional[PolicyOverrides] = None
 
 
 class Event(BaseModel):
@@ -105,17 +120,15 @@ class ReplayRequest(BaseModel):
     variant: Literal["base", "smurf", "device_spoof", "slow_drip"] = "base"
 
 
-ALLOWED_POLICY = {"alpha", "beta", "tau", "theta_mule", "stipend_cap", "escrow_hours"}
-
 v1 = "/api/v1"
 
 
 @app.post(f"{v1}/evaluate")
 def evaluate(req: EvaluateRequest, s: Nyaya = Depends(service)):
     body = req.model_dump(exclude={"policy"}, exclude_none=True)
-    overrides = {k: float(v) for k, v in (req.policy or {}).items() if k in ALLOWED_POLICY}
+    overrides = req.policy.model_dump(exclude_none=True) if req.policy else None
     try:
-        return s.evaluate(body, overrides)
+        return s.evaluate(body, overrides, dry_run=req.policy is not None)
     except ValueError as e:
         raise HTTPException(422, str(e))
 

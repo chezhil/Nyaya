@@ -27,7 +27,7 @@ from explain.card import Granite, template_card
 from explain.masker import FEATURE_LABELS, mask_facts
 from explain.notices import Notices
 from explain.policy import PolicyIndex
-from ledger import Ledger
+from ledger import Ledger, decrypt
 
 ROOT = Path(__file__).resolve().parent.parent
 POLICY_PATH = Path(__file__).resolve().parent / "policy_defaults.json"
@@ -75,6 +75,8 @@ class Nyaya:
         self.clock_offset = 0.0
         self.latencies: deque = deque(maxlen=5000)
         self._lock = threading.RLock()
+        self.rebuilt_queue_items = 0
+        self._rebuild_from_ledger()
         self._replay_cache: dict = {}
         self._stop = threading.Event()
         if start_workers:
@@ -99,13 +101,17 @@ class Nyaya:
         tx.setdefault("tx_id", "x" + secrets.token_hex(4))
         return tx
 
-    def evaluate(self, req: dict, policy_overrides: dict | None = None) -> dict:
+    def evaluate(self, req: dict, policy_overrides: dict | None = None, dry_run: bool | None = None) -> dict:
+        """Decide one payment. A dry run (any policy override, unless told otherwise) is decided and returned but
+        touches nothing: no ledger record, no queue item, no payment history. A real decision changes state only
+        after its ledger record is written, so a failed write leaves no trace."""
         t0 = time.perf_counter()
         tx = self.prepare(req)
         policy = {**self.policy, **(policy_overrides or {})}
+        dry_run = bool(policy_overrides) if dry_run is None else dry_run
 
-        self.store.ingest(tx["ts"], tx["sender_id"], tx["recipient_id"], tx["amount"])
-        recip = self.store.recipient_features(tx["recipient_id"], tx["ts"], tx.get("recipient"))
+        # Features as if this payment were already in the window (identical to ingest-then-read), without ingesting.
+        recip = self.store.peek(tx["ts"], tx["sender_id"], tx["recipient_id"], tx.get("recipient"))
         row = tx_features(tx)
         t1 = time.perf_counter()
 
@@ -140,24 +146,33 @@ class Nyaya:
         result["explain_id"] = explain_id
         t4 = time.perf_counter()
 
+        common = {"model_version": self.bundle.info()["model_version"], "engine_version": self.engine_version,
+                  "mule_device": self.bundle.info()["mule_device"], "recipient_features": recip}
+        if dry_run:
+            result.update({"what_if": True, "explain_id": None, "ledger_hash": None, "ledger_seq": None,
+                           "policy_overrides": policy_overrides or {},
+                           "latency_ms": round((t4 - t0) * 1000, 3), **common})
+            return result
+
         escrow = None
         if d["decision"] == "REVIEW":
             escrow = {"tx_id": tx["tx_id"], "sender_id": tx["sender_id"], "recipient_id": tx["recipient_id"],
                       "amount": tx["amount"], "escrow": d["escrow"],
                       "release_at": self.now() + hours * 3600}
         rec = self.ledger.append("decision", {
-            "explain_id": explain_id, "facts": facts, "model_version": self.bundle.info()["model_version"],
-            "engine_version": self.engine_version}, escrow=escrow)
+            "explain_id": explain_id, "facts": facts, "mule_flag": bool(mule_flag),
+            "model_version": self.bundle.info()["model_version"],
+            "engine_version": self.engine_version}, escrow=escrow)  # raises before any state below changes
         t5 = time.perf_counter()
+        self.store.ingest(tx["ts"], tx["sender_id"], tx["recipient_id"], tx["amount"])
 
         result.update({
-            "ledger_hash": rec["hash"], "ledger_seq": rec["seq"],
+            "what_if": False, "ledger_hash": rec["hash"], "ledger_seq": rec["seq"],
             "latency_ms": round((t5 - t0) * 1000, 3),
             "latency_breakdown_ms": {"features": round((t1 - t0) * 1000, 3), "models": round((t2 - t1) * 1000, 3),
                                      "engine": round((t3 - t2) * 1000, 3), "explain": round((t4 - t3) * 1000, 3),
                                      "ledger": round((t5 - t4) * 1000, 3)},
-            "model_version": self.bundle.info()["model_version"], "engine_version": self.engine_version,
-            "mule_device": self.bundle.info()["mule_device"], "recipient_features": recip,
+            **common,
         })
         self.latencies.append(result["latency_ms"])
         with self._lock:
@@ -165,16 +180,21 @@ class Nyaya:
             while len(self.explains) > MAX_EXPLAINS:
                 self.explains.popitem(last=False)
             if d["decision"] in ("REVIEW", "HOLD"):
-                self.queue[explain_id] = {
-                    "explain_id": explain_id, "decision": d["decision"], "amount": tx["amount"],
-                    "release_now": d["release_now"], "escrow": d["escrow"], "status": "pending",
-                    "appealed": False, "created": self.now(), "ledger_seq": rec["seq"],
-                    "release_at": escrow["release_at"] if escrow else None,
-                    "p_fraud": scores["p_fraud"], "p_mule": scores["p_mule"], "mule_flag": mule_flag,
-                    "merchant_category": facts["merchant_category"], "severity_tier": facts["severity_tier"],
-                    "policy_clause": clause["id"],
-                }
+                self.queue[explain_id] = self._queue_item(explain_id, facts, rec["seq"], self.now(),
+                                                          escrow["release_at"] if escrow else None, mule_flag)
         return result
+
+    @staticmethod
+    def _queue_item(explain_id: str, facts: dict, seq: int, created: float, release_at: float | None,
+                    mule_flag: bool) -> dict:
+        """Queue entries are built only from the masked facts in the ledger record, so a restart can rebuild
+        exactly the same entry (amounts are whole rupees, as in the record)."""
+        return {"explain_id": explain_id, "decision": facts["decision"], "amount": facts["amount"],
+                "release_now": facts["release_now"], "escrow": facts["escrow"], "status": "pending",
+                "appealed": False, "created": created, "ledger_seq": seq, "release_at": release_at,
+                "p_fraud": facts["p_fraud"], "p_mule": facts["p_mule"], "mule_flag": bool(mule_flag),
+                "merchant_category": facts["merchant_category"], "severity_tier": facts["severity_tier"],
+                "policy_clause": facts.get("clause_id")}
 
     def ingest_events(self, events: list[dict]) -> dict:
         for e in sorted(events, key=lambda e: parse_ts(e.get("ts"))):
@@ -210,15 +230,17 @@ class Nyaya:
     def now(self) -> float:
         return time.time() + self.clock_offset
 
+    # Each action below writes its ledger record first, under the service lock, and changes the queue only once
+    # that write has succeeded: a failed write leaves the queue exactly as it was, and the ledger stays the truth.
     def appeal(self, explain_id: str, note: str = "") -> dict | None:
         with self._lock:
             item = self.queue.get(explain_id)
             if item is None:
                 return None
+            rec = self.ledger.append("appeal", {"explain_id": explain_id, "note_chars": len(note)})
             item["appealed"] = True
-            item["appealed_at"] = self.now()
-        rec = self.ledger.append("appeal", {"explain_id": explain_id, "note_chars": len(note)})
-        return {**item, "ledger_hash": rec["hash"]}
+            item["appealed_at"] = rec["ts"]
+            return {**item, "ledger_hash": rec["hash"]}
 
     def queue_list(self) -> list[dict]:
         with self._lock:
@@ -228,38 +250,86 @@ class Nyaya:
     def queue_action(self, explain_id: str, action: str, analyst: str) -> dict | None:
         if action not in ("approve", "deny"):
             raise ValueError("action must be approve or deny")
+        kind = "analyst_release" if action == "approve" else "analyst_fraud_confirmed"
         with self._lock:
             item = self.queue.get(explain_id)
             if item is None:
                 return None
             if item["status"] != "pending":
                 raise ValueError(f"already {item['status']}")
+            rec = self.ledger.append(kind, {"explain_id": explain_id, "analyst": analyst[:40],
+                                            "ledger_seq_decision": item["ledger_seq"]})
             item["status"] = "approved" if action == "approve" else "denied"
             item["decided_at"] = self.now()
-        kind = "analyst_release" if action == "approve" else "analyst_fraud_confirmed"
-        rec = self.ledger.append(kind, {"explain_id": explain_id, "analyst": analyst[:40],
-                                        "ledger_seq_decision": item["ledger_seq"]})
-        return {**item, "ledger_hash": rec["hash"]}
+            return {**item, "ledger_hash": rec["hash"]}
 
-    def auto_release(self) -> list[str]:
-        """Default-to-release: escrow goes to the customer after escrow_hours unless fraud was confirmed."""
-        now, released = self.now(), []
+    def auto_release(self, failed: list | None = None) -> list[str]:
+        """Default-to-release: escrow goes to the customer after escrow_hours unless fraud was confirmed.
+        An item whose ledger write fails stays pending (and is listed in `failed`); the next run retries it."""
+        released = []
         with self._lock:
+            now = self.now()
             due = [i for i in self.queue.values()
                    if i["status"] == "pending" and i["release_at"] is not None and i["release_at"] <= now]
             for i in due:
+                try:
+                    self.ledger.append("escrow_auto_release", {"explain_id": i["explain_id"],
+                                                               "ledger_seq_decision": i["ledger_seq"]})
+                except Exception as e:
+                    if failed is not None:
+                        failed.append(i["explain_id"])
+                    print(f"escrow auto-release for {i['explain_id']} not recorded, will retry: {e}", file=sys.stderr)
+                    continue
                 i["status"] = "auto_released"
                 i["decided_at"] = now
-        for i in due:
-            self.ledger.append("escrow_auto_release", {"explain_id": i["explain_id"],
-                                                       "ledger_seq_decision": i["ledger_seq"]})
-            released.append(i["explain_id"])
+                released.append(i["explain_id"])
         return released
 
     def advance_clock(self, hours: float) -> dict:
         """Demo control: move the escrow clock forward to show automatic release."""
         self.clock_offset += float(hours) * 3600
-        return {"clock_offset_hours": self.clock_offset / 3600, "released": self.auto_release()}
+        failed: list = []
+        released = self.auto_release(failed)
+        return {"clock_offset_hours": self.clock_offset / 3600, "released": released, "failed": failed}
+
+    # ------------------------------------------------------------------ restart
+    def _rebuild_from_ledger(self) -> None:
+        """The queue and recent explanations live in memory; the ledger has every decision, appeal, analyst action
+        and release. Replay it so a restart keeps pending reviews, appeals, escrow deadlines and outcomes."""
+        status_by_kind = {"analyst_release": "approved", "analyst_fraud_confirmed": "denied",
+                          "escrow_auto_release": "auto_released"}
+        theta = float(self.policy.get("theta_mule", 0.8))
+        n = 0
+        for rec in self.ledger.records():
+            p = rec.get("payload") or {}
+            eid = p.get("explain_id")
+            if not eid:
+                continue
+            if rec.get("kind") == "decision" and isinstance(p.get("facts"), dict):
+                facts = p["facts"]
+                result = {"card_template": template_card(facts), "reasons": facts.get("reasons", []),
+                          "counterfactual": facts.get("counterfactual"),
+                          "policy_clause": {"id": facts.get("clause_id"), "title": facts.get("clause_title")}}
+                self.explains[eid] = {"facts": facts, "result": result, "granite": None}
+                while len(self.explains) > MAX_EXPLAINS:
+                    self.explains.popitem(last=False)
+                if facts.get("decision") in ("REVIEW", "HOLD"):
+                    release_at = None
+                    if rec.get("escrow_enc"):
+                        try:
+                            release_at = decrypt(self.ledger.key, rec["escrow_enc"]).get("release_at")
+                        except Exception:  # unreadable escrow: keep the item, never auto-release it blindly
+                            release_at = None
+                    mule = p.get("mule_flag", float(facts.get("p_mule", 0)) >= theta)
+                    self.queue[eid] = self._queue_item(eid, facts, rec["seq"], rec["ts"], release_at, mule)
+                    n += 1
+            elif eid in self.queue:
+                item = self.queue[eid]
+                if rec.get("kind") == "appeal":
+                    item["appealed"], item["appealed_at"] = True, rec["ts"]
+                elif rec.get("kind") in status_by_kind:
+                    item["status"], item["decided_at"] = status_by_kind[rec["kind"]], rec["ts"]
+        self.rebuilt_queue_items = n
 
     def _escrow_loop(self):
         while not self._stop.wait(30):
@@ -345,6 +415,7 @@ class Nyaya:
                 "p95": round(float(np.percentile(lat, 95)), 3), "p99": round(float(np.percentile(lat, 99)), 3)},
             "uptime_s": round(time.time() - self.started, 1),
             "queue_pending": sum(1 for i in self.queue.values() if i["status"] == "pending"),
+            "queue_rebuilt_from_ledger": self.rebuilt_queue_items,
         }
 
 

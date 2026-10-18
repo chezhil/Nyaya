@@ -24,10 +24,11 @@ def decide(scores: dict, tx: dict, policy: dict) -> dict:
     h_hold = (1 - p) * float(policy["beta"]) * math.exp(float(policy["alpha"]) * s) * urgency(tx, policy)
     delta = h_fraud - h_hold
     tau = float(policy["tau"])
+    cap = max(0.0, float(policy["stipend_cap"]))  # a stipend is never negative, whatever the policy says
     if float(scores.get("p_mule", 0.0)) >= float(policy["theta_mule"]) or delta >= tau:
         decision, release_now = "HOLD", 0.0
-    elif (len(scores.get("conformal_set", ["legit"])) != 1 or abs(delta) < tau) and amount > float(policy["stipend_cap"]):
-        decision, release_now = "REVIEW", float(policy["stipend_cap"])
+    elif (len(scores.get("conformal_set", ["legit"])) != 1 or abs(delta) < tau) and amount > cap:
+        decision, release_now = "REVIEW", cap
     else:
         decision, release_now = "RELEASE", amount
     return {"decision": decision, "release_now": round(release_now, 2), "escrow": round(amount - release_now, 2)

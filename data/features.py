@@ -140,6 +140,16 @@ class RecipientWindow:
             "forward_within_10m_ratio": sum(1 for item in q if item[3]) / n,
         }
 
+    def features_with(self, recipient: str, now: float, sender: str) -> dict:
+        """features() as it would be after add(now, sender, recipient, ...), without changing any state.
+        Used for what-if evaluations, which must not enter the payment history."""
+        q = self._incoming.get(recipient, ())
+        live = [item for item in q if now - item[0] < self.window_s]
+        forwarded = sum(1 for item in live if item[3] or (sender == recipient and now - item[0] <= self.forward_s))
+        n = len(live) + 1
+        return {"fan_in_15m": n, "unique_senders_15m": len({item[1] for item in live} | {sender}),
+                "forward_within_10m_ratio": forwarded / n}
+
     def gc(self, now: float) -> None:
         for acct in list(self._incoming):
             if not self._expire(acct, now):

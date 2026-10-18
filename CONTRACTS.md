@@ -99,7 +99,11 @@ If missing, the API uses `explain/fixtures/` (English only, marked `"source": "f
 Base `http://<host>:8000`. Dashboard is served at `/` from `dashboard/`.
 
 `POST /api/v1/evaluate` — request = payment columns from `data/schema.md` (only `sender_id`, `recipient_id`,
-`amount` required). Response:
+`amount` required). An optional `policy` object (what-if overrides: `alpha` 0–5, `beta` 0–1e6, `tau`/`tau_review` 0–1e9,
+`theta_mule` 0–1, `stipend_cap` 0–1e7, `escrow_hours` >0–720, `zone_hold_needs_mule`; unknown keys → 422) makes the call a
+**what-if**: decided and returned with `"what_if": true`, `ledger_hash`/`explain_id` null, and nothing recorded (no ledger
+record, queue item or payment history). A real decision changes state only after its ledger record is written; the analyst
+queue is rebuilt from the ledger on restart. Response:
 ```json
 {"tx_id","decision","release_now","escrow","p_fraud","p_fraud_raw","p_mule","conformal_set","harm_delta",
  "reasons":[{"feature","value","contribution"}×3],"counterfactual","policy_clause":{"id","title","text","score"},
