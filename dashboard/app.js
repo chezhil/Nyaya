@@ -58,7 +58,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   await probeBackend();
   await loadPolicy();
   await loadScenarioList();
-  loadScenario(1);
+  await loadScenario(1);
+  window.nyayaDashboardReady = true;
+  const requestedTab = window.location.hash.slice(1);
+  if (['tab-replay', 'tab-xray', 'tab-policy', 'tab-analyst'].includes(requestedTab)) switchTab(requestedTab);
 });
 
 /**

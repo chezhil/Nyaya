@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Mobile storm text visible",
+    "passed": true
+  },
+  {
+    "name": "Mobile intelligence text visible",
+    "passed": true
+  },
+  {
+    "name": "Mobile people text visible",
+    "passed": true
+  },
+  {
+    "name": "Mobile command text visible",
+    "passed": true
+  },
+  {
+    "name": "Mobile future text visible",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 1",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 2",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 3",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 4",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 5",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 6",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 7",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 8",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 9",
+    "passed": true
+  },
+  {
+    "name": "Dashboard CTA 10",
+    "passed": true
+  },
+  {
+    "name": "Layer 0 toggles",
+    "passed": true
+  },
+  {
+    "name": "Layer 1 toggles",
+    "passed": true
+  },
+  {
+    "name": "Layer 2 toggles",
+    "passed": true
+  },
+  {
+    "name": "Decision RELEASE",
+    "passed": true
+  },
+  {
+    "name": "Decision REVIEW",
+    "passed": true
+  },
+  {
+    "name": "Decision HOLD",
+    "passed": true
+  },
+  {
+    "name": "Reduced motion restores every headline",
+    "passed": true
+  }
+]

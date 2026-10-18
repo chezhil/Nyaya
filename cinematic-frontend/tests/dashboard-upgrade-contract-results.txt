@@ -1,0 +1,102 @@
+
+RUN node --check /workspace/scratch/02d2a5e0a6f3/project/dashboard/app.js
+
+RUN node --check /workspace/scratch/02d2a5e0a6f3/project/dashboard/cinematic.js
+
+RUN node --check /workspace/scratch/02d2a5e0a6f3/project/dashboard/audio-engine.js
+
+RUN node /workspace/scratch/02d2a5e0a6f3/project/dashboard/tests/dashboard-contracts.cjs
+PASS Offline initialization uses recorded system and disables custom evaluate
+PASS Dashboard ready flag set after initialization
+PASS Recorded scenario 1 decision and payment match fixture
+PASS Recorded scenario 2 decision and payment match fixture
+PASS Recorded scenario 3 decision and payment match fixture
+PASS Recorded scenario 4 decision and payment match fixture
+PASS Recorded scenario 5 decision and payment match fixture
+PASS Recorded scenario 6 decision and payment match fixture
+PASS Notice preserved verbatim: ta
+PASS Notice preserved verbatim: hi
+PASS Notice preserved verbatim: en
+PASS Replay headline and scrubber use recorded totals
+PASS Replay reset returns to first hour
+PASS Policy charts and fairness render recorded data
+PASS Empty recorded queue and offline ledger are honest
+PASS Offline mutations never send API requests
+PASS Live probe enables evaluation and scenario uses POST
+PASS Custom evaluation uses original request contract
+PASS Analyst 401 prompts token and retries encoded case id
+PASS Appeal uses existing endpoint
+PASS What-if forwards policy overrides to backend
+PASS Successful ledger response displayed
+PASS Non-2xx response falls back with recorded label
+PASS Escaping preserves XSS protection
+PASS Tab remains selectable: tab-replay
+PASS Tab remains selectable: tab-xray
+PASS Tab remains selectable: tab-policy
+PASS Tab remains selectable: tab-analyst
+
+28 dashboard contract checks passed. HTTP/DOM/Chart are mocked; no live API, browser rendering or actual Chart.js execution verified.
+
+RUN node /workspace/scratch/02d2a5e0a6f3/project/dashboard/tests/audio-contracts.cjs
+PASS No audio context or sound before user gesture
+PASS Explicit activation starts context and master at chosen volume
+PASS Scene 0 has one active bus with gradual crossfade
+PASS Scene 1 has one active bus with gradual crossfade
+PASS Scene 2 has one active bus with gradual crossfade
+PASS Scene 3 has one active bus with gradual crossfade
+PASS Scene 4 has one active bus with gradual crossfade
+PASS Dashboard attenuates ambience
+PASS Closing dashboard restores master level
+PASS Thunder begins after lightning and has bounded lifetime
+PASS Mute zeroes master immediately
+PASS Muted engine schedules no one-shots
+PASS Hidden page suspends audio
+PASS Visible enabled page resumes audio
+PASS Volume is clamped to safe control range
+PASS Disposal stops sources, closes context and clears timer
+
+16 audio lifecycle/mixing checks passed with mocked Web Audio. Listening and browser autoplay behavior require manual verification.
+
+RUN node /workspace/scratch/02d2a5e0a6f3/project/dashboard/tests/cinematic-contracts.cjs
+PASS Startup does not load dashboard iframe or activate audio
+PASS Landing loads only recorded evaluation evidence
+PASS Particles move between frames without scrolling
+PASS Scroll selects scene-specific audio
+PASS Scrolling sends no banking requests
+PASS Sound requires click and updates accessible state
+PASS Sound toggles off
+PASS Map controls affect visual layer only
+PASS Review card shows protocol explanation without API call
+PASS Explicit dashboard click loads correct existing tab
+PASS Loaded dashboard receives selected tab
+PASS Closing dashboard restores focus and pauses replay
+PASS Motion pause control updates state
+PASS System reduced-motion preference is respected
+PASS Lite quality mode can be selected
+PASS Page cleanup disposes audio
+
+16 cinematic controller checks passed with simulated DOM. Browser layout, GPU effects and playback are unverified.
+
+RUN /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python /workspace/scratch/02d2a5e0a6f3/project/dashboard/tests/static-checks.py
+PASS index.html has unique ids
+PASS index.html local references resolve
+PASS Five cinematic scenes remain in reference order
+PASS Dashboard iframe does not load automatically
+PASS Sound is off by default
+PASS All decision cards present
+PASS dashboard.html has unique ids
+PASS dashboard.html local references resolve
+PASS All recorded fixtures parse
+PASS Cinematic script has no banking API endpoint calls
+PASS Reduced motion and visibility handling exist
+PASS Desktop/mobile rules and scene motion controls present
+PASS CSS asset exists: assets/reference.png
+PASS CSS asset exists: assets/reference.png
+PASS CSS asset exists: assets/reference.png
+PASS CSS asset exists: assets/storm-city.webp
+PASS CSS asset exists: assets/human-story.webp
+PASS CSS asset exists: assets/command-center.webp
+
+18 static/source checks passed. These do not test browser layout.
+
+All requested checks passed. DOM/HTTP/Web Audio are mocked; browser/live integration is NOT verified.

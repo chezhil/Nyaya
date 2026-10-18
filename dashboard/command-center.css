@@ -1,0 +1,29 @@
+/* Presentation layer only. No changes to values, status semantics or API bindings. */
+:root{--bg-primary:#030812;--bg-surface:#091525;--bg-elevated:#101f34;--border-subtle:#1a3449;--color-brand:#38bdf8}
+body{background:radial-gradient(ellipse at 12% 0%,#0b34534d,transparent 43%),radial-gradient(ellipse at 95% 45%,#103d6d24,transparent 50%),#030812!important;color:#e6f0fb;letter-spacing:.005em}
+body>header{background:linear-gradient(110deg,#081522f7,#06101ef5)!important;border-bottom-color:#2b739c60!important;box-shadow:0 8px 35px #0005!important;backdrop-filter:blur(18px)}
+header h1{letter-spacing:.015em;line-height:1.5}header p{line-height:1.6}
+body>nav{background:#071321e8!important;border-color:#25465d!important;backdrop-filter:blur(16px)}
+body>nav>div{gap:8px;overflow-x:auto;scrollbar-width:thin}
+body>nav button{position:relative;white-space:nowrap;margin-left:0!important;padding:17px 20px!important;border-bottom:2px solid transparent;border-radius:9px 9px 0 0;transition:background .2s,color .2s,border-color .2s}
+body>nav button:hover{background:#15344d85;color:#d9f6ff!important}
+body>nav .tab-active{background:linear-gradient(0deg,#0f537442,#0b203300);border-bottom-color:#65e8ff!important;color:#82eaff!important;box-shadow:inset 0 -8px 25px #3bbcff08}
+main{padding-top:28px!important;padding-bottom:44px!important}
+main .border.rounded-xl,main .border.rounded-lg,main .metric-box,main .phone-mockup{border-color:#25465c!important;background:linear-gradient(135deg,#0e2031ee,#081321f2)!important;box-shadow:0 10px 32px #0003,inset 0 1px 0 #a0ddff0b;border-radius:14px;transition:border-color .2s,box-shadow .2s}
+main .border.rounded-xl:hover,main .metric-box:hover{border-color:#3c7392!important;box-shadow:0 13px 32px #0004,0 0 22px #31b9ef09}
+main h2{letter-spacing:-.015em}main h3{letter-spacing:.015em}main .text-slate-400{color:#a4b9cc}
+main .metric-box{padding:16px}.metric-box .font-mono{font-variant-numeric:tabular-nums}
+section[id^="tab-"]:not(.hidden){animation:command-enter .32s ease-out both}
+button{transition:background .18s,border-color .18s,box-shadow .18s,filter .18s}
+button:not(:disabled):hover{filter:brightness(1.12)}button:not(:disabled):active{filter:brightness(.94)}
+button.bg-blue-600{background:linear-gradient(120deg,#147cc0,#2454b5)!important;border:1px solid #5ccfff50;box-shadow:0 4px 14px #0964b433}
+button:disabled{filter:none;cursor:not-allowed}
+input:not([type=range]):not([type=checkbox]),select,textarea{background-color:#050e1b!important;border-color:#2b4b62!important;border-radius:8px!important;color:#e2effa!important;box-shadow:inset 0 2px 5px #0003}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #67e8f9!important;outline-offset:3px}
+input[type=range]{accent-color:#38bdf8;cursor:pointer}
+canvas{border-radius:8px}table{font-variant-numeric:tabular-nums}thead{background:#0d2031}tbody tr{transition:background .18s}tbody tr:hover{background:#15314760}
+#connectionStatusPill{box-shadow:0 0 18px #0002;line-height:1.45}#connectionStatusText{white-space:normal}
+.story-return{display:inline-flex;align-items:center;gap:6px;color:#a7eaff;border:1px solid #30617b;border-radius:999px;padding:7px 12px;font-size:11px;white-space:nowrap;background:#0b2134;transition:background .2s}.story-return:hover{background:#14374e}
+@keyframes command-enter{from{opacity:.65;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:767px){body>header{position:relative!important;padding:14px!important}header>div:first-child>div:first-child{align-items:flex-start;gap:10px;margin:0;flex-wrap:wrap}header h1{font-size:12px;flex-wrap:wrap}header p{font-size:11px}header>div:first-child>div:last-child{flex-wrap:wrap;justify-content:center}body>nav{padding:0 10px!important}body>nav button{font-size:12px;padding:14px 12px!important}main{padding:18px 12px!important;min-width:0}.grid>*{min-width:0}main .flex{flex-wrap:wrap}main input,main select{max-width:100%}.overflow-x-auto{max-width:100%}#connectionStatusPill{font-size:10px;max-width:100%}}
+@media(prefers-reduced-motion:reduce){section[id^="tab-"]:not(.hidden){animation:none}button,main .metric-box{transition:none}}

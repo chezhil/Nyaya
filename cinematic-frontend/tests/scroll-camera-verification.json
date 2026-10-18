@@ -1,0 +1,21 @@
+{
+  "environment": "Chromium browser on a self-contained in-memory page due container Chromium URL navigation policy; the production HTML/CSS/JS and exact background asset bytes were loaded",
+  "desktop": {
+    "camera_first": "matrix(1.0623, 0, 0, 1.0623, -2.9, 10)",
+    "camera_after_scroll": "matrix(1.0461, 0, 0, 1.0461, 5.2, -18)",
+    "camera_phase_first": "0.424",
+    "camera_phase_after_scroll": "0.636",
+    "dashboard_modal_open": true,
+    "horizontal_overflow": false,
+    "javascript_errors": []
+  },
+  "mobile": {
+    "horizontal_overflow": false,
+    "dashboard_modal_open": true,
+    "javascript_errors": []
+  },
+  "static_checks": "18 passed",
+  "dashboard_contract_checks": "28 passed",
+  "asset_integrity": "All assets identical to uploaded Astra final ZIP",
+  "code_integrity": "Existing dashboard.html, app.js, styles.css, command-center.css, cinematic.js, scroll-story.js, audio-engine.js unchanged"
+}
