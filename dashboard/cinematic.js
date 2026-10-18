@@ -27,8 +27,9 @@ const definitions={RELEASE:'RELEASE: the engine permits the full payment.',REVIE
 document.querySelectorAll('[data-decision]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelector('#decision-detail').textContent=definitions[btn.dataset.decision];audio.click();}));
 function selectDashboardTab(){try{if(frame.contentWindow?.nyayaDashboardReady&&frame.contentWindow?.switchTab)frame.contentWindow.switchTab(pendingTab);}catch{/* Direct dashboard link remains available if embedding is restricted. */}}
 frame.addEventListener('load',selectDashboardTab);
-// The dashboard opens as its own full-screen page (not a floating dialog); the URL hash picks the tab.
-document.querySelectorAll('.open-dashboard').forEach(btn=>btn.addEventListener('click',()=>{audio.duck(true);try{sessionStorage.setItem('nyaya-story-y',String(Math.round(scrollY)));}catch{}window.location.assign('dashboard.html#'+(btn.dataset.tab||'tab-xray'));}));
+// The dashboard opens as its own full-screen page (not a floating dialog). Buttons with data-tab open that tab;
+// the rest open the dashboard on its first tab (Cyclone Replay).
+document.querySelectorAll('.open-dashboard').forEach(btn=>btn.addEventListener('click',()=>{audio.duck(true);try{sessionStorage.setItem('nyaya-story-y',String(Math.round(scrollY)));}catch{}window.location.assign(btn.dataset.tab?'dashboard.html#'+btn.dataset.tab:'dashboard.html');}));
 // Coming back from the dashboard ('Return to Story' links to #resume, or the browser's Back button):
 // put the reader where they left the story, then tidy the URL.
 try{const nav=performance.getEntriesByType('navigation')[0];const y=Number(sessionStorage.getItem('nyaya-story-y'));const resume=location.hash==='#resume';
