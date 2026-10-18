@@ -27,7 +27,15 @@ const definitions={RELEASE:'RELEASE: the engine permits the full payment.',REVIE
 document.querySelectorAll('[data-decision]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelector('#decision-detail').textContent=definitions[btn.dataset.decision];audio.click();}));
 function selectDashboardTab(){try{if(frame.contentWindow?.nyayaDashboardReady&&frame.contentWindow?.switchTab)frame.contentWindow.switchTab(pendingTab);}catch{/* Direct dashboard link remains available if embedding is restricted. */}}
 frame.addEventListener('load',selectDashboardTab);
-document.querySelectorAll('.open-dashboard').forEach(btn=>btn.addEventListener('click',()=>{lastFocus=btn;pendingTab=btn.dataset.tab||'tab-xray';audio.click();audio.duck(true);if(!frame.getAttribute('src'))frame.src='dashboard.html#'+pendingTab;else selectDashboardTab();document.body.classList.add('opening');dialog.showModal();document.querySelector('#close-dashboard').focus();setTimeout(()=>document.body.classList.remove('opening'),500);}));
+// The dashboard opens as its own full-screen page (not a floating dialog); the URL hash picks the tab.
+document.querySelectorAll('.open-dashboard').forEach(btn=>btn.addEventListener('click',()=>{audio.duck(true);try{sessionStorage.setItem('nyaya-story-y',String(Math.round(scrollY)));}catch{}window.location.assign('dashboard.html#'+(btn.dataset.tab||'tab-xray'));}));
+// Coming back from the dashboard ('Return to Story' links to #resume, or the browser's Back button):
+// put the reader where they left the story, then tidy the URL.
+try{const nav=performance.getEntriesByType('navigation')[0];const y=Number(sessionStorage.getItem('nyaya-story-y'));const resume=location.hash==='#resume';
+ if((resume||(nav&&nav.type==='back_forward'))&&y>0){const go=()=>window.scrollTo({top:y,behavior:'instant'});requestAnimationFrame(go);
+  // Re-apply once everything has loaded: the browser's own hash/scroll handling can run after our first attempt.
+  if(document.readyState==='complete')setTimeout(go,60);else addEventListener('load',()=>setTimeout(go,60),{once:true});}
+ if(resume)history.replaceState(null,'',location.pathname+location.search);}catch{}
 document.querySelector('#close-dashboard').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('close',()=>{audio.duck(false);try{frame.contentWindow?.pauseReplay?.();}catch{}lastFocus?.focus();});
 // Recorded suite is deliberately fetched directly; landing-page visits never invoke banking endpoints.
