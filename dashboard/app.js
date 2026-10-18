@@ -659,8 +659,8 @@ async function whatIfEvaluate() {
   delete body.ts;
   const res = await apiFetch('/evaluate', { method: 'POST', body: JSON.stringify(body), timeout: 15000 });
   setText('whatIfResult', res
-    ? `${res.decision}: ${inr(res.release_now)} now, ${inr(res.escrow)} escrow, ΔH ${inr(res.harm_delta)} (default policy gave ${current.result.decision})`
-    : 'Evaluation failed.');
+    ? `${res.decision}: ${inr(res.release_now)} now, ${inr(res.escrow)} escrow, ΔH ${inr(res.harm_delta)} (default policy gave ${current.result.decision}) · what-if, not recorded`
+    : 'Evaluation failed (check the slider values).');
 }
 
 async function loadPareto() {

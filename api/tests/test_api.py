@@ -93,9 +93,19 @@ def test_scenarios_run_from_live_engine(client):
     assert again["result"]["recipient_features"]["fan_in_15m"] == 28
 
 
-def test_queue_appeal_and_auto_release(client):
-    big = {**MEENA, "recipient_id": "M9000099", "amount": 25000, "merchant_category": "clinic", "hour": 14,
-           "policy": {"tau": 1e12}}  # everything within tau -> REVIEW
+@pytest.fixture
+def review_everything():
+    """Make every payment over the cap a REVIEW by changing the service's own policy (a policy override in the
+    request would be a what-if, which records nothing)."""
+    saved = dict(main.svc.policy)
+    main.svc.policy.update(tau=1e12, tau_review=1e12)
+    yield
+    main.svc.policy.clear()
+    main.svc.policy.update(saved)
+
+
+def test_queue_appeal_and_auto_release(client, review_everything):
+    big = {**MEENA, "recipient_id": "M9000099", "amount": 25000, "merchant_category": "clinic", "hour": 14}
     r = client.post("/api/v1/evaluate", json=big).json()
     assert r["decision"] == "REVIEW"
     eid = r["explain_id"]
@@ -107,9 +117,8 @@ def test_queue_appeal_and_auto_release(client):
     assert client.get("/api/v1/ledger/verify").json()["ok"]
 
 
-def test_analyst_decision(client):
-    r = client.post("/api/v1/evaluate", json={**MEENA, "recipient_id": "M9000098", "amount": 9000,
-                                              "policy": {"tau": 1e12}}).json()
+def test_analyst_decision(client, review_everything):
+    r = client.post("/api/v1/evaluate", json={**MEENA, "recipient_id": "M9000098", "amount": 9000}).json()
     out = client.post(f"/api/v1/queue/{r['explain_id']}", json={"action": "approve", "analyst": "kaustub"}).json()
     assert out["status"] == "approved"
 

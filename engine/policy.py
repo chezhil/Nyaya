@@ -48,7 +48,7 @@ def decide(scores: dict, tx: dict, policy: dict) -> dict:
     delta = h_fraud - h_hold
     tau = float(policy["tau"])
     tau_review = float(policy.get("tau_review", tau))  # plan: |delta| < tau, i.e. tau_review == tau
-    cap = float(policy["stipend_cap"])
+    cap = max(0.0, float(policy["stipend_cap"]))  # a stipend is never negative, whatever the policy says
     uncertain = len(scores.get("conformal_set", ["legit"])) != 1  # {legit, fraud} or empty = unsure
 
     mule = float(scores.get("p_mule", 0.0)) >= float(policy["theta_mule"])

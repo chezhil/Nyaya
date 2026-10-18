@@ -70,6 +70,17 @@ class FeatureStore:
             self.mci_runs += 1
             self.mci_last_ms = round((time.perf_counter() - t) * 1000, 2)
 
+    def peek(self, ts: float, sender: str, recipient: str, overrides: dict | None = None) -> dict:
+        """Recipient features as if this payment had been ingested, without ingesting it."""
+        with self._lock:
+            f = self.window.features_with(recipient, ts, sender)
+            f.update(self.static.get(recipient, UNKNOWN_ACCOUNT))
+            f["mci"] = self._mci.get(recipient, 0.0)
+        for k, v in (overrides or {}).items():
+            if k in MODEL_B_FEATURES and v is not None:
+                f[k] = float(v)
+        return {k: f[k] for k in MODEL_B_FEATURES}
+
     def recipient_features(self, recipient: str, ts: float, overrides: dict | None = None) -> dict:
         with self._lock:
             f = self.window.features(recipient, ts)
