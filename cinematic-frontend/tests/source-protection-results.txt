@@ -1,0 +1,21 @@
+PASS index.html has unique ids
+PASS index.html local references resolve
+PASS Five cinematic scenes remain in reference order
+PASS Dashboard iframe does not load automatically
+PASS Sound is off by default
+PASS All decision cards present
+PASS dashboard.html has unique ids
+PASS dashboard.html local references resolve
+PASS All recorded fixtures parse
+PASS Cinematic script has no banking API endpoint calls
+PASS Reduced motion and visibility handling exist
+PASS Desktop/mobile rules and scene motion controls present
+PASS CSS asset exists: assets/reference.png
+PASS CSS asset exists: assets/reference.png
+PASS CSS asset exists: assets/reference.png
+PASS All fixtures and any included backend/source files byte-identical
+PASS Reference image byte-identical
+PASS Original dashboard layout preserved
+PASS Only app.js change is readiness/hash tab selection
+
+19 static/source checks passed. These do not test browser layout.

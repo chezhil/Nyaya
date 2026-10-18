@@ -1,0 +1,37 @@
+[
+  {
+    "scene": "storm-city",
+    "width": 1460,
+    "height": 1078,
+    "bytes": 746472,
+    "source": "AI reconstruction from approved reference; native generated dimensions, not enlarged"
+  },
+  {
+    "scene": "disaster-intelligence",
+    "width": 1774,
+    "height": 887,
+    "bytes": 742336,
+    "source": "AI reconstruction from approved reference; native generated dimensions, not enlarged"
+  },
+  {
+    "scene": "human-story",
+    "width": 682,
+    "height": 324,
+    "bytes": 114164,
+    "source": "Original 682x324 crop, modest unsharp mask only. Reconstruction blocked by image service. No new HD detail."
+  },
+  {
+    "scene": "command-center",
+    "width": 1639,
+    "height": 959,
+    "bytes": 569418,
+    "source": "AI reconstruction from approved reference; native generated dimensions, not enlarged"
+  },
+  {
+    "scene": "earth-sunrise",
+    "width": 1686,
+    "height": 933,
+    "bytes": 742024,
+    "source": "AI reconstruction from approved reference; native generated dimensions, not enlarged"
+  }
+]

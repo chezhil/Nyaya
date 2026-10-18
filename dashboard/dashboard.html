@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NYAYA — Disaster-Aware Fraud Decisions on IBM LinuxONE</title>
+  
+  <!-- Tailwind CSS CDN (Pinned) -->
+  <script src="vendor/tailwind-3.4.17.js"></script>
+  <!-- Chart.js CDN (Pinned) -->
+  <script src="vendor/chart.umd.min.js"></script>
+  <!-- Custom Institutional Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="command-center.css">
+  <link rel="stylesheet" href="command-center-v2.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            },
+            slate: {
+              850: '#0f172a',
+              900: '#0a0f1d',
+              950: '#040711',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-blue-600 selection:text-white nyaya-command-mode">
+
+  <!-- PRESENTATION ONLY: premium interface shell. Banking logic and API bindings stay in app.js. -->
+  <aside class="mission-rail" aria-label="Dashboard workspace navigation">
+    <div class="rail-brand">
+      <div class="rail-brand-mark">N<span>·</span></div>
+      <div><span class="rail-brand-name">NYAYA</span><small>DECISION INTELLIGENCE</small></div>
+    </div>
+    <div class="rail-divider"></div>
+    <div class="rail-overline">WORKSPACES <span>04</span></div>
+    <div class="rail-navigation">
+      <button type="button" class="rail-link" data-target="tab-replay" onclick="switchTab('tab-replay')"><span class="rail-index">01</span><span class="rail-item-text"><strong>Cyclone replay</strong><small>Human impact</small></span><span class="rail-chevron">↗</span></button>
+      <button type="button" class="rail-link" data-target="tab-xray" onclick="switchTab('tab-xray')"><span class="rail-index">02</span><span class="rail-item-text"><strong>Transaction X-Ray</strong><small>Explainable decisions</small></span><span class="rail-chevron">↗</span></button>
+      <button type="button" class="rail-link" data-target="tab-policy" onclick="switchTab('tab-policy')"><span class="rail-index">03</span><span class="rail-item-text"><strong>Policy console</strong><small>Rules &amp; fairness</small></span><span class="rail-chevron">↗</span></button>
+      <button type="button" class="rail-link" data-target="tab-analyst" onclick="switchTab('tab-analyst')"><span class="rail-index">04</span><span class="rail-item-text"><strong>Analyst queue</strong><small>Review &amp; red team</small></span><span class="rail-chevron">↗</span></button>
+    </div>
+    <div class="rail-bottom">
+      <div class="rail-signal"><span class="rail-signal-ring"></span><div><strong>Engineering preview</strong><small>Read the live/offline state in the header</small></div></div>
+      <div class="rail-footer">IBM Z DATATHON <span>2026</span></div>
+      <a class="rail-story" href="index.html" target="_top">← Back to the cinematic story</a>
+    </div>
+  </aside>
+
+  <!-- ========================================================================================= -->
+  <!-- TOP INSTITUTIONAL HEADER BAR -->
+  <!-- ========================================================================================= -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3.5 sticky top-0 z-50 shadow-xl">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Title & Architecture Indicator -->
+      <div class="flex items-center space-x-4">
+        <div class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-xl px-3.5 py-1.5 rounded-lg shadow-md tracking-wider flex items-center space-x-1.5">
+          <span>NYAYA</span>
+          <span class="text-[10px] bg-blue-950 px-1.5 py-0.5 rounded text-blue-300 font-mono">v4</span>
+        </div>
+        <div>
+          <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+            NYAYA — Disaster-Aware Fraud Decisions on IBM LinuxONE
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800">s390x Big Endian</span>
+          </h1>
+          <p class="text-xs text-slate-400">
+            Real-Time AI for Critical Decisions · IBM Z Datathon 2026 · Multi-Model (XGBoost + PyTorch NNPA + Granite 350M)
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Connection Switcher & Status Pill -->
+      <div class="flex items-center gap-3">
+        <!-- Status Pill -->
+        <div id="connectionStatusPill" class="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-950/70 text-amber-300 border border-amber-700/60 shadow">
+          <span class="w-2 h-2 rounded-full bg-amber-400 badge-pulse"></span>
+          <span id="connectionStatusText">OFFLINE FALLBACK: Using Local Fixtures</span>
+        </div>
+
+        <a href="index.html" target="_top" class="story-return">← Return to Story</a>
+        <!-- Settings Button -->
+        <button onclick="toggleConfigModal()" title="Configure Backend API URL" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- PLATFORM HARDWARE TELEMETRY STRIP (POPULATED FROM GET /system) -->
+    <div class="max-w-7xl mx-auto mt-2 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-y-1 text-[11px] font-mono text-slate-400">
+      <div class="flex items-center space-x-3">
+        <span>Arch: <strong class="text-blue-400 font-bold" id="hwArch">—</strong></span>
+        <span class="text-slate-700">•</span>
+        <span>Telum Accelerator: <strong class="text-indigo-400 font-bold" id="hwTelum">—</strong></span>
+        <span class="text-slate-700">•</span>
+        <span>Crypto: <strong class="text-emerald-400 font-bold" id="hwCrypto">—</strong></span>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span>Security: <strong class="text-slate-300 font-bold" id="hwSecurity">—</strong></span>
+        <span class="text-slate-700">•</span>
+        <span>Latency: <strong class="text-emerald-400 font-bold" id="hwLatency">—</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- VISUAL COMMAND DECK: illustrative navigation motif, not live backend data -->
+  <div class="command-hero" aria-label="NYAYA command center introduction">
+    <div class="command-hero-content">
+      <div class="command-eyebrow"><span class="command-live-dot" aria-hidden="true"></span> NYAYA <span class="command-slash">/</span> INTELLIGENCE OPERATIONS <span class="command-tag">INTERFACE v4</span></div>
+      <h2>Intelligence for the <em>moments that matter.</em></h2>
+      <p>From disaster-aware replay to explainable transaction decisions — every outcome deserves context, evidence and human oversight.</p>
+      <div class="command-hero-pills"><span><b>04</b> decision workspaces</span><span><b>03</b> outcome classes</span><span class="command-pills-muted">IBM Z / LinuxONE</span></div>
+    </div>
+    <div class="hero-illustration" aria-hidden="true">
+      <div class="hero-orbit hero-orbit-1"></div><div class="hero-orbit hero-orbit-2"></div><div class="hero-orbit hero-orbit-3"></div>
+      <div class="hero-planet"></div><div class="hero-scan"></div>
+      <div class="hero-coordinate one">32.3° N</div><div class="hero-coordinate two">RISK · CONTEXT · TRUST</div>
+      <div class="hero-cross cross-a">+</div><div class="hero-cross cross-b">+</div>
+    </div>
+  </div>
+
+  <!-- ========================================================================================= -->
+  <!-- TAB NAVIGATION -->
+  <!-- ========================================================================================= -->
+  <nav class="bg-slate-900/90 border-b border-slate-800 px-6 backdrop-blur">
+    <div class="max-w-7xl mx-auto flex space-x-8 text-sm">
+      <button onclick="switchTab('tab-replay')" id="btn-tab-replay" class="py-3 px-1 text-slate-400 hover:text-white tab-active flex items-center gap-2">
+        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        ⭐ 1. Cyclone Replay
+      </button>
+      <button onclick="switchTab('tab-xray')" id="btn-tab-xray" class="py-3 px-1 text-slate-400 hover:text-white flex items-center gap-2">
+        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        2. Transaction X-Ray & Notice
+      </button>
+      <button onclick="switchTab('tab-policy')" id="btn-tab-policy" class="py-3 px-1 text-slate-400 hover:text-white flex items-center gap-2">
+        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+        ⭐ 3. Policy Console & Pareto
+      </button>
+      <button onclick="switchTab('tab-analyst')" id="btn-tab-analyst" class="py-3 px-1 text-slate-400 hover:text-white flex items-center gap-2">
+        <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+        4. Analyst Queue & Red Team
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========================================================================================= -->
+  <!-- MAIN WORKSPACE -->
+  <!-- ========================================================================================= -->
+  <main class="max-w-7xl mx-auto p-6 flex-grow w-full space-y-6">
+
+    <!-- ========================================================================================= -->
+    <!-- TAB 1: CYCLONE REPLAY (SIDE-BY-SIDE LIVE SIMULATION) -->
+    <!-- ========================================================================================= -->
+    <section id="tab-replay" class="space-y-6">
+      <div class="workspace-heading"><div><span class="workspace-eyebrow">01 / DISASTER OPERATIONS</span><h2>Cyclone replay</h2><p>Compare the legacy baseline with NYAYA outcomes during a synthetic disaster scenario.</p></div><div class="workspace-heading-mark" aria-hidden="true">NY<span>·</span></div></div>
+      
+      <!-- Headline Metric Banner (#20) -->
+      <div class="bg-gradient-to-r from-blue-950/80 via-indigo-950/60 to-purple-950/80 border border-blue-700/60 rounded-xl p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-5">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-widest text-blue-300 font-bold bg-blue-900/80 px-2.5 py-0.5 rounded-full border border-blue-600">Headline (#20) · from POST /api/v1/replay</span>
+          <h2 class="text-2xl font-black text-white mt-1.5 flex items-center flex-wrap gap-2">
+            Displaced Victims Left with ₹0:
+            <span class="text-rose-400 text-base font-bold" id="headlineLegacy">Legacy —</span>
+            <span class="text-emerald-400 font-extrabold text-3xl" id="headlineNyaya">NYAYA —</span>
+          </h2>
+          <p class="text-xs text-slate-300 mt-1" id="replayHeadlineSource">Press "Start Replay" to run the synthetic Chennai cyclone replay on LinuxONE.</p>
+          <p class="text-[11px] text-slate-400 mt-1">By design (engine/policy.py, zone rule on): inside a declared zone only the mule override can leave a payer with ₹0; uncertain payments above the cap get the stipend now and the rest in escrow.</p>
+        </div>
+
+        <!-- Replay Control Action Bar -->
+        <div class="bg-slate-900/90 border border-slate-700 p-3 rounded-xl flex items-center space-x-3 shadow-lg">
+          <button id="btnReplayToggle" onclick="toggleReplay()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-mono font-bold flex items-center gap-2 shadow">
+            <svg id="replayBtnIcon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+            <span id="replayBtnText">Start Replay</span>
+          </button>
+          <button onclick="stepReplay()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-mono border border-slate-700">
+            Step +1h
+          </button>
+          <button onclick="resetReplay()" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-2.5 py-2 rounded-lg text-xs font-mono">
+            Reset
+          </button>
+          <div class="border-l border-slate-700 pl-3 text-right">
+            <div id="replayHourText" class="text-sm font-mono font-bold text-blue-400">Hour 0:00</div>
+            <div class="text-[10px] text-slate-400">Timeline</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chennai Cyclone Timeline Scrubber -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div class="flex justify-between items-center text-xs font-mono">
+          <span class="text-slate-300">Preset Scenario: <strong class="text-white" id="replayScenarioName">Chennai cyclone (synthetic preset)</strong></span>
+          <span class="text-slate-400">Current Phase: <strong class="text-amber-400" id="replayPhaseText">—</strong></span>
+          <span id="replaySeverityBadge" class="px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-700 font-bold">Severity Tier 0</span>
+        </div>
+        <input type="range" min="0" max="0" step="1" value="0" id="replayScrubber" class="w-full accent-blue-500 cursor-pointer">
+        <div class="flex justify-between text-[10px] font-mono text-slate-500">
+          <span id="replayAxisStart">start</span>
+          <span id="replayAxisMid"></span>
+          <span id="replayAxisEnd">end</span>
+        </div>
+      </div>
+
+      <!-- Split Screen Comparison: Left Legacy Engine vs Right NYAYA -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- LEFT: LEGACY ENGINE -->
+        <div class="bg-slate-900/90 border border-rose-900/40 rounded-xl p-5 space-y-4 shadow-lg">
+          <div class="flex justify-between items-center border-b border-rose-900/40 pb-3">
+            <div>
+              <span class="text-[10px] font-mono text-rose-400 uppercase tracking-wider font-bold">Standard Industry Baseline</span>
+              <h3 class="text-base font-bold text-white">Legacy Bank Fraud Engine (context-blind)</h3>
+            </div>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">Model A, no disaster context, 1% FPR</span>
+          </div>
+
+          <!-- Legacy Metric Counters -->
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="metric-box border-rose-900/50">
+              <div class="text-[11px] text-slate-400">Victim Payments Frozen</div>
+              <div id="legacyFreezeCount" class="text-xl font-bold font-mono text-rose-400 mt-1">—</div>
+              <div id="legacyFreezePct" class="text-[10px] text-rose-500 font-mono">Awaiting Live Run</div>
+            </div>
+            <div class="metric-box">
+              <div class="text-[11px] text-slate-400">Cash Available</div>
+              <div id="legacyCashAvailable" class="text-base font-bold font-mono text-slate-300 mt-1">—</div>
+              <div class="text-[10px] text-slate-500 font-mono">Awaiting Live Run</div>
+            </div>
+            <div class="metric-box">
+              <div class="text-[11px] text-slate-400">Fraud Bleed</div>
+              <div id="legacyBleedAmount" class="text-base font-bold font-mono text-amber-400 mt-1">—</div>
+              <div class="text-[10px] text-slate-500 font-mono">Awaiting Live Run</div>
+            </div>
+          </div>
+
+          <!-- Streaming Feed -->
+          <div class="space-y-2">
+            <div class="text-xs font-mono text-slate-400 font-bold">Per-hour counters:</div>
+            <div id="legacyFeedList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+              <div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center text-xs font-mono">
+                Press "Start Replay" to initiate transaction comparison stream...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: NYAYA 2.0 (IBM LinuxONE) -->
+        <div class="bg-slate-900/90 border border-blue-900/50 rounded-xl p-5 space-y-4 shadow-lg">
+          <div class="flex justify-between items-center border-b border-blue-900/40 pb-3">
+            <div>
+              <span class="text-[10px] font-mono text-blue-400 uppercase tracking-wider font-bold">IBM LinuxONE (s390x) Native</span>
+              <h3 class="text-base font-bold text-white">NYAYA Tri-State Harm Engine</h3>
+            </div>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-bold">RELEASE · REVIEW · HOLD</span>
+          </div>
+
+          <!-- NYAYA Metric Counters -->
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="metric-box border-emerald-900/60 bg-emerald-950/20">
+              <div class="text-[11px] text-emerald-300">Victims Left ₹0</div>
+              <div id="nyayaZeroVictims" class="text-xl font-bold font-mono text-emerald-400 mt-1">—</div>
+              <div id="nyayaZeroVictimsSub" class="text-[10px] text-emerald-500 font-mono">Awaiting Replay Run</div>
+            </div>
+            <div class="metric-box border-blue-900/50">
+              <div class="text-[11px] text-slate-400">Emergency Cash</div>
+              <div id="nyayaCashAvailable" class="text-base font-bold font-mono text-emerald-400 mt-1">—</div>
+              <div id="nyayaStipendsDisbursed" class="text-[10px] text-emerald-500 font-mono">Awaiting Replay Run</div>
+            </div>
+            <div class="metric-box border-indigo-900/50">
+              <div class="text-[11px] text-slate-400">Blocked (HOLD)</div>
+              <div id="nyayaBlockedCount" class="text-base font-bold font-mono text-indigo-400 mt-1">—</div>
+              <div id="nyayaLeakSub" class="text-[10px] text-indigo-500 font-mono">Awaiting Replay Run</div>
+            </div>
+          </div>
+
+          <!-- Streaming Feed -->
+          <div class="space-y-2">
+            <div class="text-xs font-mono text-slate-400 font-bold">Per-hour counters:</div>
+            <div id="nyayaFeedList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+              <div class="p-3 rounded bg-slate-950 border border-slate-800 text-slate-500 italic text-center text-xs font-mono">
+                Press "Start Replay" to initiate transaction comparison stream...
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================================= -->
+    <!-- TAB 2: TRANSACTION X-RAY & MULTILINGUAL NOTICE -->
+    <!-- ========================================================================================= -->
+    <section id="tab-xray" class="space-y-6 hidden">
+      <div class="workspace-heading"><div><span class="workspace-eyebrow">02 / DECISION EXPLAINABILITY</span><h2>Transaction X-Ray</h2><p>Inspect transaction risk signals, explanations and customer notices.</p></div><div class="workspace-heading-mark" aria-hidden="true">NY<span>·</span></div></div>
+      
+      <!-- Quick-Load Scenario Buttons (All 6 Fixtures from Plan v4 §8) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2.5">
+        <div class="flex justify-between items-center text-xs font-mono">
+          <span class="text-slate-400 font-bold uppercase tracking-wider">Demo scenarios (data/scenarios/demo_scenarios.json):</span>
+          <span class="text-blue-400" id="xrayExpected">Click to run live on LinuxONE</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <button id="btnFixture1" onclick="loadScenario(1)" class="px-2.5 py-1.5 bg-blue-600 text-white font-bold rounded text-xs border border-blue-500 text-left truncate">
+            1. Meena (Camp 2 AM)
+          </button>
+          <button id="btnFixture2" onclick="loadScenario(2)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
+            2. Clinic Payment (REVIEW)
+          </button>
+          <button id="btnFixture3" onclick="loadScenario(3)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
+            3. Syndicate Mule Spoofer
+          </button>
+          <button id="btnFixture4" onclick="loadScenario(4)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
+            4. Peacetime Normal
+          </button>
+          <button id="btnFixture5" onclick="loadScenario(5)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
+            5. Peacetime ATO
+          </button>
+          <button id="btnFixture6" onclick="loadScenario(6)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700 text-left truncate">
+            6. Red-Team Smurfing
+          </button>
+        </div>
+      </div>
+
+      <!-- X-Ray Layout: 2 Columns -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT COLUMN: Custom Evaluator & Diagnostic Gauges (5 Cols) -->
+        <div class="lg:col-span-5 space-y-5">
+          
+          <!-- Custom Transaction Evaluator Form -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+              <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">Transaction Evaluator</h3>
+              <span class="text-[10px] font-mono text-slate-400" id="xrayTxId">—</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div>
+                <label class="text-slate-400">Amount (₹):</label>
+                <input type="number" id="inputAmount" value="1800" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
+              </div>
+              <div>
+                <label class="text-slate-400">Category:</label>
+                <select id="inputCategory" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
+                  <option value="pharmacy">pharmacy</option>
+                  <option value="clinic">clinic</option>
+                  <option value="grocery">grocery</option>
+                  <option value="fuel">fuel</option>
+                  <option value="cash_out">cash_out</option>
+                  <option value="transfer">transfer</option>
+                  <option value="donation">donation</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-slate-400">Severity Tier (0-5):</label>
+                <input type="number" id="inputSeverity" min="0" max="5" value="4" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
+              </div>
+              <div>
+                <label class="text-slate-400">Hour of Day (0-23):</label>
+                <input type="number" id="inputHour" min="0" max="23" value="2" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
+              </div>
+              <div>
+                <label class="text-slate-400">Geo Shift (km):</label>
+                <input type="number" id="inputGeoShift" value="82.5" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-white font-mono mt-1">
+              </div>
+              <div class="col-span-2 pt-1 text-[11px] text-slate-500 font-mono">
+                * Note: Recipient graph features (fan-in velocity, MCI) are computed server-side on LinuxONE per CONTRACTS.md §7.
+              </div>
+            </div>
+
+            <button id="btnRunCustomEvaluate" onclick="evaluateCustomForm()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-mono font-bold tracking-wider uppercase shadow">
+              Run Real-Time LinuxONE Decision
+            </button>
+          </div>
+
+          <!-- Decision Banner & Uncertainty Panel -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-mono text-slate-400 font-bold uppercase tracking-wider">Engine Output</span>
+              <span class="text-[10px] font-mono text-slate-400">Latency: <strong id="xrayLatency" class="text-emerald-400">—</strong></span>
+            </div>
+
+            <!-- Giant Decision Badge -->
+            <div id="xrayDecisionBadge" class="p-3 rounded-lg text-center font-mono font-bold text-sm uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-600 shadow">
+              —
+            </div>
+
+            <!-- Financial Liquidity Breakdown -->
+            <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+                <div class="text-slate-400">Liquid Payout Now:</div>
+                <div id="xrayAmountDisbursed" class="text-base font-bold text-emerald-400 mt-1">—</div>
+              </div>
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+                <div class="text-slate-400">Buffered in Escrow:</div>
+                <div id="xrayEscrowHeld" class="text-base font-bold text-amber-400 mt-1">—</div>
+              </div>
+            </div>
+
+            <!-- Dual Models & Conformal Set -->
+            <div class="space-y-2.5 pt-2 border-t border-slate-800 text-xs font-mono">
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>Model A (XGBoost Calibrated):</span>
+                  <span id="valPFraud" class="font-bold text-blue-400">—</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2">
+                  <div id="barPFraud" class="bg-blue-500 h-2 rounded-full w-0"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>Model B (PyTorch MLP, P(mule)):</span>
+                  <span id="valPMule" class="font-bold text-purple-400">—</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2">
+                  <div id="barPMule" class="bg-purple-500 h-2 rounded-full w-0"></div>
+                </div>
+              </div>
+
+              <div class="flex justify-between items-center pt-1">
+                <span class="text-slate-400">Conformal Set (90%):</span>
+                <span id="valConformalSet" class="px-2 py-0.5 rounded bg-slate-950 text-indigo-300 border border-slate-700 font-bold">—</span>
+              </div>
+
+              <div class="flex justify-between items-center">
+                <span class="text-slate-400">Net Harm Delta (&Delta;H = H_F - H_H):</span>
+                <span id="valHarmDelta" class="font-bold text-emerald-400">—</span>
+              </div>
+              <div class="text-[10px] text-slate-500">Model: <span id="xrayModelVersion">—</span></div>
+            </div>
+          </div>
+
+          <!-- TreeSHAP Feature Attributions Bar Chart -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+            <h4 class="text-xs font-mono text-slate-400 uppercase tracking-wider font-bold">Top-3 TreeSHAP Feature Contributions</h4>
+            <div class="chart-container-sm">
+              <canvas id="chartShap"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Counterfactual, Policy, Granite & Notice Phone (7 Cols) -->
+        <div class="lg:col-span-7 space-y-5">
+          
+          <!-- Counterfactual Card (#10) -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+            <div class="flex items-center space-x-2 text-xs font-mono text-blue-400 font-bold">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>Counterfactual Explanation (#10):</span>
+            </div>
+            <p class="text-xs text-slate-200 bg-slate-950 p-3 rounded-lg border border-slate-800 leading-relaxed font-sans" id="valCounterfactual">—</p>
+          </div>
+
+          <!-- BM25 Grounded Policy Clause Card (#14) -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+            <div class="flex justify-between items-center text-xs font-mono">
+              <span class="text-slate-400 font-bold">Policy Clause Retrieved (BM25):</span>
+              <span id="valPolicyId" class="text-indigo-400 font-bold">—</span>
+            </div>
+            <p class="text-xs text-slate-300 bg-slate-950 p-3 rounded-lg border border-slate-800 italic leading-relaxed" id="valPolicyText">—</p>
+          </div>
+
+          <!-- IBM Granite 350M Card + Masked Prompt Inspector (#2) -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">IBM Granite 350M Card (GET /explain)</span>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700 font-mono">Masked PII</span>
+              </div>
+              <button onclick="toggleMaskedPrompt()" class="text-xs font-mono text-blue-400 hover:text-blue-300 underline">
+                Inspect Masked Facts
+              </button>
+            </div>
+
+            <!-- Toggleable Masked Prompt Drawer -->
+            <div id="maskedPromptPanel" class="hidden bg-slate-950 p-3 rounded-lg border border-indigo-900/50 text-[11px] font-mono text-indigo-200 space-y-1">
+              <span class="text-slate-400 font-bold">Allow-listed facts sent to Granite (explain/masker.py):</span>
+              <p id="valMaskedPrompt" class="select-all whitespace-pre-wrap">—</p>
+            </div>
+
+            <!-- Plain English Granite Output -->
+            <div class="bg-indigo-950/25 border border-indigo-800/60 p-3.5 rounded-lg text-xs text-indigo-100 font-sans leading-relaxed whitespace-pre-wrap" id="valGraniteOutput">—</div>
+          </div>
+
+          <!-- BENEFICIARY NOTICE PHONE PREVIEW WITH 3-WAY LANGUAGE TOGGLE (#22) -->
+          <div class="phone-mockup p-5 space-y-3.5">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+              <span class="text-[10px] font-mono text-emerald-400 uppercase tracking-wider font-bold">Multilingual SMS / App Notice (#22)</span>
+              <!-- 3-Way Language Toggle -->
+              <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                <button onclick="setLanguage('ta')" id="btnLang_ta" class="px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs">தமிழ்</button>
+                <button onclick="setLanguage('hi')" id="btnLang_hi" class="px-3 py-1 rounded text-slate-400 hover:text-white text-xs">हिन्दी</button>
+                <button onclick="setLanguage('en')" id="btnLang_en" class="px-3 py-1 rounded text-slate-400 hover:text-white text-xs">EN</button>
+              </div>
+            </div>
+
+            <!-- Simulated SMS / Push Box -->
+            <div class="space-y-2.5">
+              <div class="flex justify-between items-center text-xs text-slate-400 font-mono">
+                <span class="text-blue-400 font-bold flex items-center gap-1.5" id="phoneNoticeHeader">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                  வங்கி உடனடி அறிவிப்பு (Tamil)
+                </span>
+                <span>Just Now</span>
+              </div>
+              <p class="text-sm font-medium text-slate-200 leading-relaxed font-sans" id="phoneNoticeBody">—</p>
+              <div class="pt-2 flex justify-between items-center">
+                <span class="text-[10px] text-slate-500 font-mono">Text from docs/notices.json (rendered by the API)</span>
+                <button onclick="fileAppeal()" id="phoneAppealBtn" class="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 underline">
+                  மேல்முறையீடு (Appeal) செய்க →
+                </button>
+              </div>
+            </div>
+
+            <!-- SHA-256 Ledger Hash Stamp -->
+            <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[10px] font-mono text-slate-400 flex justify-between items-center">
+              <span>Ledger SHA-256 hash:</span>
+              <span class="text-slate-300 select-all truncate w-48 text-right" id="valLedgerHash">—</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================================= -->
+    <!-- TAB 3: POLICY CONSOLE, PARETO & FAIRNESS -->
+    <!-- ========================================================================================= -->
+    <section id="tab-policy" class="space-y-6 hidden">
+      <div class="workspace-heading"><div><span class="workspace-eyebrow">03 / POLICY INTELLIGENCE</span><h2>Policy console</h2><p>Explore policy trade-offs, fairness metrics and evidence-backed constraints.</p></div><div class="workspace-heading-mark" aria-hidden="true">NY<span>·</span></div></div>
+      
+      <!-- Interactive Policy Sliders Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">Executive Risk Governance</span>
+            <h2 class="text-lg font-bold text-white">Interactive Policy Console & Parameter Sensitivity</h2>
+          </div>
+          <button onclick="resetPolicySliders()" class="text-xs font-mono text-blue-400 hover:text-blue-300">
+            Reset to Grounded Defaults
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono">
+          <!-- Alpha Slider -->
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-300 font-bold">&alpha; (Severity Exponent):</span>
+              <span class="text-blue-400 font-bold" id="valAlpha">—</span>
+            </div>
+            <input type="range" min="0.10" max="1.50" step="0.05" value="0.6" id="sliderAlpha" oninput="updatePolicySliders()" class="w-full accent-blue-500 cursor-pointer">
+            <p class="text-[10px] text-slate-500">Freeze harm grows as e^(α·severity).</p>
+          </div>
+
+          <!-- Beta Slider (Grounded) -->
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-300 font-bold">&beta; (Wrongful Freeze Harm):</span>
+              <span class="text-emerald-400 font-bold" id="valBeta">—</span>
+            </div>
+            <input type="range" min="100" max="2000" step="5" value="345" id="sliderBeta" oninput="updatePolicySliders()" class="w-full accent-emerald-500 cursor-pointer">
+            <p class="text-[10px] text-slate-500">Anchored to 1-day official rural MGNREGS wage for Tamil Nadu (₹345/day in 2026–27).</p>
+          </div>
+
+          <!-- Tau Slider -->
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-300 font-bold">&tau; (REVIEW Band Width):</span>
+              <span class="text-purple-400 font-bold" id="valTau">—</span>
+            </div>
+            <input type="range" min="100" max="2500" step="50" value="250" id="sliderTau" oninput="updatePolicySliders()" class="w-full accent-purple-500 cursor-pointer">
+            <p class="text-[10px] text-slate-500">HOLD when ΔH ≥ τ (inside a zone, a REVIEW unless mule-flagged).</p>
+          </div>
+
+          <!-- Cap Survival (Grounded) -->
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-300 font-bold">Cap_survival (Stipend):</span>
+              <span class="text-amber-400 font-bold" id="valCap">—</span>
+            </div>
+            <input type="range" min="1000" max="6000" step="500" value="3000" id="sliderCap" oninput="updatePolicySliders()" class="w-full accent-amber-500 cursor-pointer">
+            <p class="text-[10px] text-slate-500">Anchored to 50% of TN SDRF emergency flood cash relief assistance norm.</p>
+          </div>
+        </div>
+        <div class="flex flex-col md:flex-row md:items-center gap-3 text-xs font-mono pt-1">
+          <button onclick="whatIfEvaluate()" class="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white rounded font-bold">Re-run the X-Ray payment with these values</button>
+          <span id="whatIfResult" class="text-slate-300">—</span>
+        </div>
+      </div>
+
+      <!-- Charts Row: Left Pareto Frontier, Right Probability Calibration Plot -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Chart 1: Pareto Frontier -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-mono text-slate-300 uppercase tracking-wider font-bold">Chart 1: Pareto Sweep (GET /api/v1/pareto)</h3>
+            <span class="text-[11px] font-mono text-blue-400" id="paretoMeta">—</span>
+          </div>
+          <div class="chart-container-md">
+            <canvas id="chartPareto"></canvas>
+          </div>
+          <p class="text-[11px] text-slate-400 font-sans">Each dot is one policy setting (one parameter varied around the tuned default), valued on the held-out test split. Harm uses the engine's own harm terms, so it is not independent evidence. <span id="paretoPointText" class="text-slate-200"></span></p>
+        </div>
+
+        <!-- Table 2: Independent 10,000-payment suite (POST /api/v1/simulate) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-mono text-slate-300 uppercase tracking-wider font-bold">Table 2: Independent Suite (POST /api/v1/simulate)</h3>
+            <span class="text-[11px] font-mono text-emerald-400" id="simulateMeta">—</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs font-mono text-left text-slate-300">
+              <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+                <tr><th class="p-2">Metric</th><th class="p-2">NYAYA</th><th class="p-2">Legacy</th><th class="p-2">Naive relaxed</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800" id="simulateTableBody"></tbody>
+            </table>
+          </div>
+          <p class="text-[11px] text-slate-400 font-sans" id="simulateModelLine"></p>
+        </div>
+
+      </div>
+
+      <!-- Table 3: Demographic Income-Band Fairness Audit (#7) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">Ethical AI / Responsible Banking (#7)</span>
+            <h3 class="text-base font-bold text-white mt-0.5">Income-Band Fairness Audit (from /simulate)</h3>
+          </div>
+          <span id="fairnessBadge" class="text-xs font-mono px-3 py-1 rounded bg-slate-950 text-slate-300 border border-slate-700 font-bold">—</span>
+        </div>
+
+        <p class="text-xs text-slate-400 font-sans">
+          Income band is <strong>strictly excluded from model features</strong> and evaluated only during post-hoc audit to check whether honest payers in each band are frozen or reviewed equally often.
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs font-mono text-left text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-3">View</th>
+                <th class="p-3">Income Band (synthetic)</th>
+                <th class="p-3">Payments</th>
+                <th class="p-3">Freeze (HOLD) Rate</th>
+                <th class="p-3">REVIEW Rate</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800" id="fairnessTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================================= -->
+    <!-- TAB 4: ANALYST QUEUE, RED-TEAM SUITE & PLATFORM PROOF -->
+    <!-- ========================================================================================= -->
+    <section id="tab-analyst" class="space-y-6 hidden">
+      <div class="workspace-heading"><div><span class="workspace-eyebrow">04 / HUMAN OVERSIGHT</span><h2>Analyst queue</h2><p>Review flagged decisions, adversarial scenarios and platform evidence.</p></div><div class="workspace-heading-mark" aria-hidden="true">NY<span>·</span></div></div>
+      
+      <!-- Top Row: Section A Analyst Queue (7 Cols) & Section C Tamper-Evident Ledger (5 Cols) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- SECTION A: HUMAN-IN-THE-LOOP ANALYST QUEUE (7 COLS) -->
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">Human-In-The-Loop Governance</span>
+              <h3 class="text-base font-bold text-white mt-0.5">Section A: Emergency Operations Analyst Queue</h3>
+            </div>
+            <span id="queueCountBadge" class="text-xs font-mono px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-bold">—</span>
+            <button onclick="advanceEscrowClock()" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">Advance escrow clock +48h</button>
+          </div>
+
+          <div class="space-y-3" id="analystQueueContainer">
+            <div class="p-6 text-center text-slate-500 font-mono text-xs bg-slate-950 rounded-lg border border-slate-800">Loading queue…</div>
+          </div>
+        </div>
+
+        <!-- SECTION C: TAMPER-EVIDENT CPACF AUDIT LEDGER (5 COLS) -->
+        <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h4 class="text-xs font-mono text-slate-300 uppercase tracking-wider font-bold">Section C: Tamper-Evident Ledger</h4>
+            <span id="ledgerIntegrityBadge" class="px-2.5 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-700 text-xs font-mono font-bold">AWAITING VERIFICATION ⚠️</span>
+          </div>
+
+          <p class="text-xs text-slate-400 leading-relaxed font-sans">
+            Every decision, appeal, analyst action and auto-release is appended to a SHA-256 hash chain (OpenSSL, which uses IBM Z CPACF); escrow details are AES-256-GCM encrypted. Measured OpenSSL throughput: docs/evidence/openssl_*.txt.
+          </p>
+
+          <!-- Ledger Hardware Performance Metrics -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs font-mono space-y-2">
+            <div class="flex justify-between"><span class="text-slate-400">Records verified:</span><span class="text-white font-bold" id="valVerifiedBlocks">—</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Algorithm:</span><span class="text-emerald-400 font-bold" id="valLedgerAlgo">—</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Verify time:</span><span class="text-emerald-400 font-bold" id="valLedgerVerifyMs">—</span></div>
+            <div class="flex justify-between gap-2"><span class="text-slate-400">Head:</span><span class="text-slate-300 truncate w-48 text-right select-all" id="valLedgerHead">—</span></div>
+          </div>
+
+          <!-- Actions: Verify vs Simulate 1-Byte Tamper -->
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <button onclick="verifyLedgerIntegrity()" class="py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-mono font-bold shadow">
+              Verify Hash Chain
+            </button>
+            <button onclick="simulateLedgerTamper()" class="py-2 bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-700 rounded text-xs font-mono font-bold">
+              What does tampering show?
+            </button>
+          </div>
+
+          <!-- Tamper Warning Alert -->
+          <div id="tamperWarningBox" class="hidden p-3 rounded-lg bg-rose-950 text-rose-300 border border-rose-800 text-xs font-mono leading-relaxed"></div>
+        </div>
+
+      </div>
+
+      <!-- SECTION B: "WE ATTACKED OUR OWN SYSTEM" RED-TEAM EVALUATION (#19) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">Adversarial Evaluation (#19)</span>
+            <h3 class="text-base font-bold text-white mt-0.5">Section B: "We Attacked Our Own System" Red-Team Stress Test</h3>
+          </div>
+          <span class="text-xs font-mono px-3 py-1 rounded bg-slate-950 text-slate-300 border border-slate-700" id="redteamMeta">—</span>
+        </div>
+
+        <p class="text-xs text-slate-400 font-sans">
+          We generated 3 adaptive syndicate datasets (data.generate --variant) and ran them through the live models and engine on LinuxONE, to show where NYAYA holds and where it weakens.
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs font-mono text-left text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-3">Variant</th>
+                <th class="p-3">Evasion Strategy</th>
+                <th class="p-3">Syndicate Payments</th>
+                <th class="p-3">Detected (vs base)</th>
+                <th class="p-3">HOLD / REVIEW</th>
+                <th class="p-3">Feature Still Carrying Most Signal</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800" id="redteamTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION D: NNPA VS. CPU BATCH THROUGHPUT BENCHMARK TABLE (#23) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-xs font-mono text-indigo-400 font-bold uppercase tracking-wider">Measured Benchmark (#23)</span>
+            <h3 class="text-base font-bold text-white mt-0.5">Section D: Model B on the Telum NNPA vs CPU (artifacts/bench/throughput.json)</h3>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-400 font-sans">
+          Measured by deploy/bench_throughput.py on our LinuxONE VM: p50 / p95 latency including host↔device transfer, and decisions per second. At this model size (7→32→16→1) the NNPA is not faster overall, so we claim no speed-up (AGENTS.md rule 8). <span id="benchMeta" class="text-slate-500"></span>
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs font-mono text-left text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-3">Batch Size</th>
+                <th class="p-3">CPU p50 / p95 · rate</th>
+                <th class="p-3">NNPA p50 / p95 · rate</th>
+                <th class="p-3">Result</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800" id="benchTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================================= -->
+  <!-- CONFIGURATION MODAL (API Base URL Switcher) -->
+  <!-- ========================================================================================= -->
+  <div id="configModal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <h3 class="text-sm font-bold text-white font-mono">Backend Connection Settings</h3>
+        <button onclick="toggleConfigModal()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+      <div class="space-y-2 text-xs font-mono">
+        <label class="text-slate-400">FastAPI Server Base URL:</label>
+        <input type="text" id="inputApiUrl" value="http://localhost:8000" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono text-xs">
+        <p class="text-[11px] text-slate-500">Connect to local uvicorn instance (<code>http://localhost:8000</code>) or LinuxONE Community Cloud IP.</p>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="toggleConfigModal()" class="px-3 py-1.5 rounded text-xs text-slate-400 hover:text-white">Cancel</button>
+        <button onclick="saveApiUrl()" class="px-4 py-1.5 rounded text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold font-mono">Save & Reconnect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 border-t border-slate-800 px-6 py-4 text-xs font-mono text-slate-400">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>NYAYA · Team Asteroid / IBM Z Datathon 2026 · <span id="footerVersions">—</span></div>
+      <div class="flex items-center space-x-4">
+        <span>Branch: <strong class="text-slate-300">aaditya-dashboard</strong></span>
+        <span>Platform: <strong class="text-blue-400">IBM LinuxONE (s390x)</strong></span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

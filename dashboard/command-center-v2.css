@@ -1,0 +1,244 @@
+/* NYAYA COMMAND CENTER / THE PRESENTATION LAYER
+ * All existing API calls, calculations, DOM ids, form handlers and business rules remain unchanged.
+ * The dashboard is a financial decision console, not a simulated live data source.
+ */
+:root {
+  --cmd-rail: 242px;
+  --cmd-ink: #eaf5ff;
+  --cmd-muted: #8ca9c2;
+  --cmd-line: rgba(91, 161, 207, .18);
+  --cmd-accent: #50d5fb;
+  --cmd-purple: #a5a5ff;
+}
+html { scroll-behavior:smooth; }
+body.nyaya-command-mode {
+  color:var(--cmd-ink);
+  font-family: Inter, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  background: radial-gradient(ellipse 50% 25% at 52% -10%, #12648a38, transparent),
+              radial-gradient(ellipse 45% 30% at 99% 58%, #173b7a2b, transparent),
+              linear-gradient(115deg, #03070f 0%, #07121e 48%, #040b15 100%) !important;
+  min-width:0;
+  isolation:isolate;
+}
+body.nyaya-command-mode::before {
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.22;
+  background-image:linear-gradient(#3fc4f90d 1px,transparent 1px),linear-gradient(90deg,#3fc4f90d 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(to bottom,#0009,transparent 88%);
+}
+body.nyaya-command-mode>header,
+body.nyaya-command-mode>nav,
+body.nyaya-command-mode>main,
+body.nyaya-command-mode>footer,
+body.nyaya-command-mode>.command-hero {margin-left:var(--cmd-rail);}
+
+/* Vertical mission navigation. Original tab buttons remain present and functional. */
+.mission-rail {
+  width:var(--cmd-rail);position:fixed;z-index:80;inset:0 auto 0 0;
+  padding:26px 15px 19px;
+  background:linear-gradient(178deg,#091a2a 0%,#06111f 49%,#050d19 100%);
+  border-right:1px solid #31618057;
+  box-shadow:14px 0 60px #02050b55;
+  display:flex;flex-direction:column;gap:0;
+  overflow-y:auto;scrollbar-width:thin;
+}
+.rail-brand {display:flex;align-items:center;gap:10px;padding:8px 10px 22px}
+.rail-brand-mark {width:42px;height:42px;display:grid;place-items:center;flex-shrink:0;border-radius:12px;
+  font:900 22px/1 Georgia,serif;color:#d4f7ff;
+  background:linear-gradient(130deg,#218ec0,#0b243f 75%);border:1px solid #6fdaf980;
+  box-shadow:0 0 25px #17a5ed24,inset 0 1px 0 #d1faff45;}
+.rail-brand-mark span,.workspace-heading-mark span{color:#52e1ff}
+.rail-brand-name{display:block;letter-spacing:.25em;font-weight:800;font-size:15px;color:#f0f9ff}
+.rail-brand small{display:block;font-size:8px;letter-spacing:.09em;white-space:nowrap;margin-top:4px;color:#7298b3}
+.rail-divider{height:1px;background:linear-gradient(90deg,transparent,#2e647d9c,transparent);margin:0 8px 26px}
+.rail-overline{display:flex;justify-content:space-between;padding:0 13px;color:#5f8cac;font:700 10px/1.3 ui-monospace,monospace;letter-spacing:.19em;margin-bottom:10px}
+.rail-overline span{color:#64d9fd}
+.rail-navigation{display:flex;flex-direction:column;gap:7px}
+.rail-link{display:flex;align-items:center;width:100%;gap:10px;padding:12px 9px;border-radius:11px;
+  border:1px solid transparent;background:transparent;color:#89a1b6;text-align:left;cursor:pointer;
+  transition:background .22s,border-color .22s,color .22s,transform .22s;}
+.rail-index{font:700 11px/1 ui-monospace,monospace;color:#5b8ba7;border:1px solid #23455b;
+  border-radius:7px;padding:8px 6px;min-width:30px;text-align:center}
+.rail-item-text{display:block;min-width:0;flex:1}
+.rail-item-text strong{display:block;font-size:12px;line-height:1.25;color:#c2d5e5;font-weight:700}
+.rail-item-text small{display:block;font-size:10px;margin-top:5px;color:#6e8fa7}
+.rail-chevron{color:#6a93ad;font-size:13px;opacity:0;transition:opacity .2s}
+.rail-link:hover{background:#1431498a;border-color:#3b8cb353;transform:translateX(2px)}
+.rail-link:hover .rail-chevron{opacity:1}
+body:has(#tab-replay:not(.hidden)) .rail-link[data-target="tab-replay"],
+body:has(#tab-xray:not(.hidden)) .rail-link[data-target="tab-xray"],
+body:has(#tab-policy:not(.hidden)) .rail-link[data-target="tab-policy"],
+body:has(#tab-analyst:not(.hidden)) .rail-link[data-target="tab-analyst"]{
+  background:linear-gradient(110deg,#103a54,#122c47a1);color:#e9fbff;border-color:#41d0f34f;
+  box-shadow:0 8px 25px #02142366,inset 3px 0 0 #66defd;transform:none;
+}
+body:has(#tab-replay:not(.hidden)) .rail-link[data-target="tab-replay"] .rail-index,
+body:has(#tab-xray:not(.hidden)) .rail-link[data-target="tab-xray"] .rail-index,
+body:has(#tab-policy:not(.hidden)) .rail-link[data-target="tab-policy"] .rail-index,
+body:has(#tab-analyst:not(.hidden)) .rail-link[data-target="tab-analyst"] .rail-index {
+  background:#135270;color:#aaf2ff;border-color:#54cdeb80;
+}
+body:has(#tab-replay:not(.hidden)) .rail-link[data-target="tab-replay"] strong,
+body:has(#tab-xray:not(.hidden)) .rail-link[data-target="tab-xray"] strong,
+body:has(#tab-policy:not(.hidden)) .rail-link[data-target="tab-policy"] strong,
+body:has(#tab-analyst:not(.hidden)) .rail-link[data-target="tab-analyst"] strong{color:#f0fcff}
+.rail-bottom{margin-top:auto;padding:22px 6px 0}
+.rail-signal{display:flex;align-items:flex-start;gap:9px;border:1px solid #26506b;background:#0a2235a8;
+  border-radius:12px;padding:13px 10px}
+.rail-signal-ring{width:7px;height:7px;border-radius:100%;background:#57d6f2;box-shadow:0 0 0 4px #57d6f01f;flex-shrink:0;margin-top:4px}
+.rail-signal strong{color:#c3e5f5;font-size:11px;display:block}
+.rail-signal small{color:#7598b1;display:block;font-size:10px;line-height:1.5;margin-top:3px}
+.rail-footer{font:700 9px/1.5 ui-monospace,monospace;letter-spacing:.12em;
+  display:flex;justify-content:space-between;color:#7397af;padding:20px 6px 12px}
+.rail-footer span{color:#b5dcf0}
+.rail-story{display:block;color:#89cee6;font-size:11px;text-decoration:none;border-top:1px solid #284960;padding:14px 5px 0}
+.rail-story:hover{color:white}
+
+/* Header — lighter visual density, same live status and API controls. */
+body.nyaya-command-mode>header{top:0;padding:15px 24px!important;
+  background:linear-gradient(110deg,#071724ee,#071422f7)!important;
+  border-bottom:1px solid #295e7b77!important;box-shadow:0 9px 30px #01081477!important;}
+body.nyaya-command-mode>header>div{max-width:1440px!important}
+body.nyaya-command-mode>header>div:first-child>div:first-child>div:first-child{
+  border-radius:10px!important;background:#10283c!important;border:1px solid #4fd0f18a!important;
+  box-shadow:0 0 25px #00cbf519!important;letter-spacing:.18em!important;}
+body.nyaya-command-mode>header h1{font-size:13px;letter-spacing:.002em;font-weight:700}
+body.nyaya-command-mode>header p{font-size:10px!important;line-height:1.45!important;color:#88a4ba!important}
+body.nyaya-command-mode>header>div:nth-child(2){opacity:.82;font-size:10px!important;margin-top:12px!important}
+body.nyaya-command-mode #connectionStatusPill{border-radius:9px;box-shadow:0 0 0 1px #ed9d2a19,0 8px 23px #03060b8c;
+  padding:9px 11px;font-size:10px;max-width:310px}
+body.nyaya-command-mode .story-return{padding:9px 13px;border-radius:9px}
+
+/* Hero. Abstract globe is a decorative motif, not a real-time disaster map. */
+.command-hero{position:relative;overflow:hidden;margin-top:20px;margin-right:23px;margin-bottom:16px;
+  min-height:190px;padding:27px 31px;border-radius:18px;
+  background:linear-gradient(100deg,#0a2136 0%,#0c2539 53%,#0c2840 100%);
+  border:1px solid #3b86a66e;box-shadow:0 16px 50px #0006,inset 0 1px 0 #d1f5ff18;}
+.command-hero::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 86% 38%,#40c4f326,transparent 30%),
+             linear-gradient(125deg,transparent 54%,#56d8ff0a 54.1%,transparent 54.5%),
+             repeating-linear-gradient(90deg,transparent 0 42px,#70d9ff07 43px 44px);}
+.command-hero-content{position:relative;z-index:2;max-width:790px}
+.command-eyebrow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:#89daf9;letter-spacing:.16em;font:700 10px/1.4 ui-monospace,monospace}
+.command-live-dot{width:7px;height:7px;border-radius:50%;background:#58d7ef;box-shadow:0 0 13px #31e9fa88}
+.command-slash{color:#33637b}.command-tag{font-size:9px;letter-spacing:.08em;color:#aac5d8;padding:4px 8px;border:1px solid #45758a77;border-radius:4px}
+.command-hero h2{font:500 clamp(25px,2.4vw,41px)/1.14 Georgia,'Times New Roman',serif;letter-spacing:-.045em;
+  margin:12px 0 8px;color:#f5faff;text-wrap:balance}
+.command-hero h2 em{font-style:italic;color:#66ddf7}
+.command-hero p{font-size:12px;line-height:1.65;max-width:600px;color:#9eb7c9}
+.command-hero-pills{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+.command-hero-pills span{display:flex;gap:6px;align-items:center;border-radius:7px;padding:7px 12px;
+  background:#03152380;border:1px solid #33627a7e;color:#99b9ce;font-size:10px;white-space:nowrap}
+.command-hero-pills span b{color:#88f0fc;font:800 13px ui-monospace,monospace}
+.command-hero-pills span.command-pills-muted{color:#7e9db1;background:transparent}
+.hero-illustration{position:absolute;right:3%;top:-75px;bottom:-105px;width:365px;pointer-events:none;opacity:.94;}
+.hero-orbit,.hero-planet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;}
+.hero-orbit{border:1px solid #56bfe770;box-shadow:inset 0 0 40px #2cb9e818,0 0 30px #2cb9e811;}
+.hero-orbit-1{width:250px;height:250px;border-color:#54d3ff8c}
+.hero-orbit-2{width:310px;height:310px;border-color:#4086bd70;border-style:dashed}
+.hero-orbit-3{width:378px;height:378px;border-color:#3579af59}
+.hero-planet{width:206px;height:206px;
+  background:radial-gradient(circle at 35% 32%,#92ecff9a,#144d7c66 30%,#0a2747 55%,#041426 72%),
+             repeating-linear-gradient(105deg,transparent 0 18px,#31c1ed25 19px 20px);
+  border:1px solid #63d9f687;box-shadow:0 0 60px #38c9ff3a,inset -32px -20px 39px #0009,inset 5px 8px 35px #6deaff3a;}
+.hero-planet::after{content:'';position:absolute;inset:15%;border-radius:50%;border:1px dashed #b7f6ff43;transform:rotate(-28deg) scaleX(.4)}
+.hero-scan{width:340px;position:absolute;top:50%;left:50%;height:1px;background:linear-gradient(90deg,transparent,#99eaffaa,transparent);transform:translate(-50%,-50%) rotate(-18deg)}
+.hero-coordinate{position:absolute;font:9px ui-monospace,monospace;letter-spacing:.1em;color:#7ab7d6}
+.hero-coordinate.one{top:18%;right:1%}.hero-coordinate.two{bottom:23%;left:3%}
+.hero-cross{position:absolute;color:#64bde6;font-size:18px}.cross-a{right:8%;top:30%}.cross-b{left:7%;bottom:29%}
+
+/* Original nav controls retain their onclick handlers and IDs. */
+body.nyaya-command-mode>nav{padding:0 22px!important;border-bottom:none!important;background:transparent!important;backdrop-filter:none}
+body.nyaya-command-mode>nav>div{max-width:1440px!important;padding:6px;gap:4px;border:1px solid #2b5065;
+  border-radius:12px;background:#071827df;box-shadow:inset 0 1px 0 #b2edff0e,0 12px 30px #0003}
+body.nyaya-command-mode>nav button{padding:12px 15px!important;border-bottom:0!important;border-radius:8px;
+  font-size:11px;white-space:nowrap;min-height:46px;font-weight:650;}
+body.nyaya-command-mode>nav button.tab-active{background:linear-gradient(110deg,#135e80,#10384e)!important;
+  color:#e7faff!important;border:1px solid #46c5ed77!important;box-shadow:0 4px 18px #12a9e91a}
+body.nyaya-command-mode>nav button:not(.tab-active):hover{background:#183c51aa!important}
+
+/* Section typography and layout. */
+body.nyaya-command-mode>main{max-width:1440px!important;padding:20px 24px 48px!important;width:100%;}
+.workspace-heading{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:13px 5px 17px}
+.workspace-eyebrow{color:#6dd8f2;letter-spacing:.19em;font:700 10px ui-monospace,monospace}
+.workspace-heading h2{font:500 28px/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.035em;color:#f4f9fc;margin:6px 0}
+.workspace-heading p{font-size:12px;line-height:1.6;color:#90acc1}
+.workspace-heading-mark{font:700 24px Georgia,serif;color:#517b98;letter-spacing:-.1em;border:1px solid #36627b;
+  border-radius:12px;width:48px;height:48px;display:grid;place-items:center;background:#0d2840}
+body.nyaya-command-mode main .border.rounded-xl,
+body.nyaya-command-mode main .border.rounded-lg,
+body.nyaya-command-mode main .metric-box,
+body.nyaya-command-mode main .phone-mockup{
+  background:linear-gradient(147deg,#0e2235 0%,#091827 63%,#0a1624 100%)!important;
+  border-color:#35627d8a!important;
+  box-shadow:0 8px 34px #0004,inset 0 1px 0 #d5efff10;
+  border-radius:15px!important;
+}
+body.nyaya-command-mode main .bg-gradient-to-r{background:linear-gradient(112deg,#12284b,#0b2144 56%,#291d49)!important;
+  border-color:#3c82b9a1!important;box-shadow:0 13px 35px #02091880,inset 0 1px 0 #fff1;}
+body.nyaya-command-mode main .metric-box{border-radius:10px!important;padding:15px 12px!important;
+  background:linear-gradient(145deg,#0f2f44,#081d30)!important;}
+body.nyaya-command-mode main .metric-box .text-xl,
+body.nyaya-command-mode main .metric-box .text-base.font-bold {letter-spacing:-.04em}
+body.nyaya-command-mode main .border.rounded-xl:hover,
+body.nyaya-command-mode main .metric-box:hover{border-color:#4b98bd!important;box-shadow:0 10px 35px #0004,0 0 20px #2594d017;}
+body.nyaya-command-mode input:not([type=range]):not([type=checkbox]),
+body.nyaya-command-mode select,
+body.nyaya-command-mode textarea{background:#061525!important;border:1px solid #35637e!important;
+  border-radius:9px!important;min-height:33px;color:#f1faff!important;}
+body.nyaya-command-mode main button:not(:disabled){border-radius:8px;}
+body.nyaya-command-mode button.bg-blue-600{background:linear-gradient(120deg,#158ad2,#2369b8)!important;
+  border:1px solid #80e4ff65!important;box-shadow:0 7px 20px #047eda38!important;}
+body.nyaya-command-mode #replayScrubber{height:5px}
+body.nyaya-command-mode table{border-collapse:separate;border-spacing:0}
+body.nyaya-command-mode thead{background:#14304999}
+body.nyaya-command-mode tbody tr:nth-child(even){background:#14273a36}
+body.nyaya-command-mode tbody tr:hover{background:#17516c57}
+body.nyaya-command-mode canvas{filter:drop-shadow(0 2px 15px #1ccfff0b)}
+body.nyaya-command-mode #configModal{z-index:100!important}
+body.nyaya-command-mode>footer{background:#071522!important;border-top:1px solid #28495f!important;}
+body.nyaya-command-mode .story-return{white-space:nowrap}
+body.nyaya-command-mode button:focus-visible,body.nyaya-command-mode a:focus-visible{outline:2px solid #85e8fc!important;outline-offset:3px}
+@keyframes nyaya-panel-rise{from{opacity:.6;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+body.nyaya-command-mode main > section:not(.hidden)>.workspace-heading{animation:nyaya-panel-rise .35s ease-out both}
+
+@media(max-width:1330px){
+  :root{--cmd-rail:207px}
+  .mission-rail{padding-inline:9px}.rail-item-text strong{font-size:11px}
+  .rail-brand-name{letter-spacing:.15em}
+  .hero-illustration{opacity:.53;right:-6%;}
+  .command-hero-content{max-width:680px}
+}
+@media(max-width:1050px){
+  :root{--cmd-rail:0px}
+  .mission-rail{display:none}
+  body.nyaya-command-mode>header,body.nyaya-command-mode>nav,body.nyaya-command-mode>main,
+  body.nyaya-command-mode>footer,body.nyaya-command-mode>.command-hero{margin-left:0}
+  .hero-illustration{right:0;opacity:.4}
+}
+@media(max-width:700px){
+  .command-hero{margin:12px 10px;padding:20px 18px;min-height:190px}
+  .command-hero h2{font-size:29px;max-width:360px}
+  .command-hero p{font-size:11px;max-width:330px}
+  .hero-illustration{right:-145px;opacity:.22}
+  body.nyaya-command-mode>header{padding:13px!important}
+  body.nyaya-command-mode>nav{padding:0 10px!important}
+  body.nyaya-command-mode>nav>div{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}
+  body.nyaya-command-mode>nav button{font-size:10px;padding:11px 10px!important;flex-shrink:0}
+  body.nyaya-command-mode>main{padding:10px 11px 35px!important}
+  .workspace-heading{padding:12px 4px 15px}.workspace-heading h2{font-size:25px}
+  .workspace-heading-mark{width:39px;height:39px;font-size:21px;flex-shrink:0}
+  .command-hero-pills{gap:5px}.command-hero-pills span{padding:6px 7px;font-size:9px}
+  body.nyaya-command-mode main .flex{flex-wrap:wrap}
+  body.nyaya-command-mode main .grid>*{min-width:0}
+  body.nyaya-command-mode #connectionStatusPill{max-width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ .rail-link,.rail-chevron{transition:none!important}
+ body.nyaya-command-mode main > section:not(.hidden)>.workspace-heading{animation:none!important}
+ html{scroll-behavior:auto}
+}
+/* Tailwind w-full on main is relative to the viewport; compensate for the desktop rail. */
+@media(min-width:1051px){
+  body.nyaya-command-mode>main{width:calc(100% - var(--cmd-rail))!important;}
+}

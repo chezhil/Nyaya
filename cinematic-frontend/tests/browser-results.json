@@ -1,0 +1,116 @@
+{
+  "checks": [
+    {
+      "name": "Five scenes in order",
+      "passed": true
+    },
+    {
+      "name": "storm image decoded",
+      "passed": true
+    },
+    {
+      "name": "intelligence image decoded",
+      "passed": true
+    },
+    {
+      "name": "people image decoded",
+      "passed": true
+    },
+    {
+      "name": "command image decoded",
+      "passed": true
+    },
+    {
+      "name": "future image decoded",
+      "passed": true
+    },
+    {
+      "name": "Sound ON browser interaction",
+      "passed": true
+    },
+    {
+      "name": "Sound OFF browser interaction",
+      "passed": true
+    },
+    {
+      "name": "Motion pauses",
+      "passed": true
+    },
+    {
+      "name": "Navigation hash",
+      "passed": true
+    },
+    {
+      "name": "Map layer toggles off",
+      "passed": true
+    },
+    {
+      "name": "Decision card interaction",
+      "passed": true
+    },
+    {
+      "name": "Dashboard dialog opens",
+      "passed": true
+    },
+    {
+      "name": "Dashboard initialized with recorded fixtures",
+      "passed": true
+    },
+    {
+      "name": "Dashboard replay tab",
+      "passed": true
+    },
+    {
+      "name": "Dashboard xray tab",
+      "passed": true
+    },
+    {
+      "name": "Dashboard policy tab",
+      "passed": true
+    },
+    {
+      "name": "Dashboard analyst tab",
+      "passed": true
+    },
+    {
+      "name": "Dashboard closes",
+      "passed": true
+    },
+    {
+      "name": "Mobile storm no page overflow",
+      "passed": true
+    },
+    {
+      "name": "Mobile intelligence no page overflow",
+      "passed": true
+    },
+    {
+      "name": "Mobile people no page overflow",
+      "passed": true
+    },
+    {
+      "name": "Mobile command no page overflow",
+      "passed": true
+    },
+    {
+      "name": "Mobile future no page overflow",
+      "passed": true
+    },
+    {
+      "name": "No uncaught JavaScript errors",
+      "passed": true
+    },
+    {
+      "name": "No failed resource requests",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "failed": [],
+  "httpErrors": [
+    {
+      "url": "http://127.0.0.1:8765/api/v1/system",
+      "status": 404
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "app.js": true,
+  "cinematic.js": true,
+  "audio-engine.js": true,
+  "styles.css": true,
+  "fixtures/simulate.json": true,
+  "fixtures/replay.json": true,
+  "fixtures/system.json": true,
+  "fixtures/scenario_3.json": true,
+  "fixtures/README.md": true,
+  "fixtures/scenario_2.json": true,
+  "fixtures/scenario_4.json": true,
+  "fixtures/queue.json": true,
+  "fixtures/redteam.json": true,
+  "fixtures/scenario_5.json": true,
+  "fixtures/scenarios.json": true,
+  "fixtures/pareto.json": true,
+  "fixtures/scenario_6.json": true,
+  "fixtures/scenario_1.json": true,
+  "fixtures/throughput.json": true,
+  "fixtures/policy.json": true
+}

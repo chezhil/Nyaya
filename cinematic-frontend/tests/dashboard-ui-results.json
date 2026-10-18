@@ -1,0 +1,77 @@
+{
+  "checks": [
+    {
+      "name": "replay tab displays",
+      "passed": true
+    },
+    {
+      "name": "xray tab displays",
+      "passed": true
+    },
+    {
+      "name": "policy tab displays",
+      "passed": true
+    },
+    {
+      "name": "analyst tab displays",
+      "passed": true
+    },
+    {
+      "name": "Replay starts",
+      "passed": true
+    },
+    {
+      "name": "Replay pauses",
+      "passed": true
+    },
+    {
+      "name": "Timeline scrubber usable",
+      "passed": true
+    },
+    {
+      "name": "Replay resets",
+      "passed": true
+    },
+    {
+      "name": "Return to Story",
+      "passed": true
+    },
+    {
+      "name": "Story scrolling future",
+      "passed": true
+    },
+    {
+      "name": "Story scrolling storm",
+      "passed": true
+    },
+    {
+      "name": "Story opens dashboard",
+      "passed": true
+    },
+    {
+      "name": "Modal returns to story",
+      "passed": true
+    },
+    {
+      "name": "Mobile replay no page overflow",
+      "passed": true
+    },
+    {
+      "name": "Mobile xray no page overflow",
+      "passed": true
+    },
+    {
+      "name": "Mobile policy no page overflow",
+      "passed": true
+    },
+    {
+      "name": "Mobile analyst no page overflow",
+      "passed": true
+    },
+    {
+      "name": "No uncaught JS errors",
+      "passed": true
+    }
+  ],
+  "errors": []
+}
