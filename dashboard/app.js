@@ -62,6 +62,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.nyayaDashboardReady = true;
   const requestedTab = window.location.hash.slice(1);
   if (['tab-replay', 'tab-xray', 'tab-policy', 'tab-analyst'].includes(requestedTab)) switchTab(requestedTab);
+  resetScroll();
+  // The browser's own jump to the #tab-… anchor can land after this; undo it once everything has loaded.
+  if (document.readyState === 'complete') setTimeout(resetScroll, 50);
+  else window.addEventListener('load', () => setTimeout(resetScroll, 50), { once: true });
 });
 
 /**
@@ -171,6 +175,14 @@ async function loadPolicy() {
 }
 
 // Tab Switching
+// Start every tab, and every visit to the dashboard, at the top of the page. Tabs are sections that are shown and
+// hidden in one long page, so without this a new tab opens wherever the previous one was scrolled to; and because the
+// URL hash (#tab-xray) is also a section id, the browser would otherwise jump down to that section on load.
+function resetScroll() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+}
+try { history.scrollRestoration = 'manual'; } catch (e) { /* older browsers */ }
+
 function switchTab(tabId) {
   document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
   document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('tab-active'));
@@ -194,6 +206,9 @@ function switchTab(tabId) {
     fetchRedTeamEvaluation();
     loadThroughput();
   }
+  resetScroll();
+  // Keep the open tab in the URL, so reload and sharing land on the same tab (replaceState: no extra Back steps).
+  try { if (activeSec && location.hash !== '#' + tabId) history.replaceState(null, '', '#' + tabId); } catch (e) { /* file:// */ }
 }
 
 // Setup Event Listeners
